@@ -1,369 +1,699 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hugo Manager</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.min.css">
+    <link rel="stylesheet" href="/static/dist/css/app.css" />
     <script>
-        window.APP_CONFIG = {{CONFIG_JSON}};
+      window.APP_CONFIG = {{CONFIG_JSON}};
     </script>
-</head>
-<body x-data="app()" x-init="init()" @keydown.window="handleKeydown($event)">
+  </head>
+  <body x-data="app()" x-init="init()" @keydown.window="handleKeydown($event)">
     <!-- Header -->
     <header class="header">
-        <div class="header-left">
-            <div class="logo">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                </svg>
-                <span>Hugo Manager</span>
-            </div>
-            <span class="project-name" x-text="config.projectName"></span>
+      <div class="header-left">
+        <div class="logo">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+          </svg>
+          <span>Hugo Manager</span>
         </div>
-        <div class="header-center">
-            <!-- Hugo status indicator -->
-            <div class="hugo-status" :class="'status-' + hugoStatus.status">
-                <span class="status-dot"></span>
-                <span class="status-text" x-text="getStatusText()"></span>
-            </div>
-            <div class="hugo-controls">
-                <button @click="hugoStart()" :disabled="hugoStatus.status === 'running'" class="btn btn-sm" title="Start Hugo">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
-                </button>
-                <button @click="hugoStop()" :disabled="hugoStatus.status === 'stopped'" class="btn btn-sm" title="Stop Hugo">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg>
-                </button>
-                <button @click="hugoRestart()" :disabled="hugoStatus.status === 'stopped'" class="btn btn-sm" title="Restart Hugo">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-                </button>
-            </div>
+        <span class="project-name" x-text="config.projectName"></span>
+      </div>
+      <div class="header-center">
+        <!-- Hugo status indicator -->
+        <div class="hugo-status" :class="'status-' + hugoStatus.status">
+          <span class="status-dot"></span>
+          <span class="status-text" x-text="getStatusText()"></span>
         </div>
-        <div class="header-right">
-            <button @click="toggleLogs()" class="btn btn-sm" :class="{ active: showLogs }">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
-                Logs
-            </button>
-            <button @click="openImageUpload()" class="btn btn-sm btn-primary">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                Upload Image
-            </button>
+        <div class="hugo-controls">
+          <button
+            @click="hugoStart()"
+            :disabled="hugoStatus.status === 'running'"
+            class="btn btn-sm"
+            title="Start Hugo"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5,3 19,12 5,21" />
+            </svg>
+          </button>
+          <button
+            @click="hugoStop()"
+            :disabled="hugoStatus.status === 'stopped'"
+            class="btn btn-sm"
+            title="Stop Hugo"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="6" width="12" height="12" />
+            </svg>
+          </button>
+          <button
+            @click="hugoRestart()"
+            :disabled="hugoStatus.status === 'stopped'"
+            class="btn btn-sm"
+            title="Restart Hugo"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M23 4v6h-6M1 20v-6h6" />
+              <path
+                d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"
+              />
+            </svg>
+          </button>
         </div>
+      </div>
+      <div class="header-right">
+        <button
+          @click="toggleLogs()"
+          class="btn btn-sm"
+          :class="{ active: showLogs }"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+          </svg>
+          Logs
+        </button>
+        <button @click="openImageUpload()" class="btn btn-sm btn-primary">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <path d="M21 15l-5-5L5 21" />
+          </svg>
+          Upload Image
+        </button>
+      </div>
     </header>
 
     <main class="main-container">
-        <!-- Sidebar: File Tree -->
-        <aside class="sidebar" :style="{ width: sidebarWidth + 'px' }">
-            <div class="sidebar-header">
-                <h3>Files</h3>
-                <div class="sidebar-actions">
-                    <button @click="refreshFiles()" class="btn btn-icon" title="Refresh">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-                    </button>
-                    <button @click="showNewFileDialog()" class="btn btn-icon" title="New File">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15h6"/></svg>
-                    </button>
-                </div>
-            </div>
-            <div class="file-tree">
-                <template x-for="item in fileTree" :key="item.path">
-                    <div x-html="renderTreeItem(item, 0)"></div>
-                </template>
-            </div>
-            
-            <!-- Shortcodes Panel -->
-            <div class="shortcodes-panel">
-                <h4 @click="shortcodesExpanded = !shortcodesExpanded" class="panel-header">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ rotated: shortcodesExpanded }"><polyline points="9 18 15 12 9 6"/></svg>
-                    Shortcodes
-                </h4>
-                <div x-show="shortcodesExpanded" class="shortcodes-list">
-                    <template x-for="sc in shortcodes" :key="sc.name">
-                        <button @click="insertShortcode(sc)" class="shortcode-btn" :title="sc.name">
-                            <span x-text="sc.name"></span>
-                        </button>
-                    </template>
-                </div>
-            </div>
-        </aside>
+      <!-- Sidebar: File Tree -->
+      <aside class="sidebar" :style="{ width: sidebarWidth + 'px' }">
+        <div class="sidebar-header">
+          <h3>Files</h3>
+          <div class="sidebar-actions">
+            <button
+              @click="refreshFiles()"
+              class="btn btn-icon"
+              title="Refresh"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M23 4v6h-6M1 20v-6h6" />
+                <path
+                  d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"
+                />
+              </svg>
+            </button>
+            <button
+              @click="showNewFileDialog()"
+              class="btn btn-icon"
+              title="New File"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
+                />
+                <path d="M14 2v6h6M12 18v-6M9 15h6" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="file-tree">
+          <template x-for="item in fileTree" :key="item.path">
+            <div x-html="renderTreeItem(item, 0)"></div>
+          </template>
+        </div>
 
-        <!-- Resize Handle -->
-        <div class="resize-handle sidebar-resize" @mousedown="startResize($event, 'sidebar')"></div>
+        <!-- Shortcodes Panel -->
+        <div class="shortcodes-panel">
+          <h4
+            @click="shortcodesExpanded = !shortcodesExpanded"
+            class="panel-header"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              :class="{ rotated: shortcodesExpanded }"
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            Shortcodes
+          </h4>
+          <div x-show="shortcodesExpanded" class="shortcodes-list">
+            <template x-for="sc in shortcodes" :key="sc.name">
+              <button
+                @click="insertShortcode(sc)"
+                class="shortcode-btn"
+                :title="sc.name"
+              >
+                <span x-text="sc.name"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+      </aside>
 
-        <!-- Editor Panel -->
-        <section class="editor-panel" :style="{ width: editorWidth + 'px' }">
-            <!-- Tabs -->
-            <div class="editor-tabs">
-                <template x-for="tab in tabs" :key="tab.path">
-                    <div class="tab" :class="{ active: activeTab === tab.path, modified: tab.modified }" @click="switchTab(tab.path)">
-                        <span class="tab-icon" x-html="getFileIcon(tab.type)"></span>
-                        <span class="tab-name" x-text="tab.name"></span>
-                        <span x-show="tab.modified" class="tab-modified">●</span>
-                        <button @click.stop="closeTab(tab.path)" class="tab-close">×</button>
-                    </div>
-                </template>
-            </div>
+      <!-- Resize Handle -->
+      <div
+        class="resize-handle sidebar-resize"
+        @mousedown="startResize($event, 'sidebar')"
+      ></div>
 
-            <!-- Toolbar -->
-            <div class="editor-toolbar" x-show="tabs.length > 0">
-                <div class="toolbar-group">
-                    <button @click="saveCurrentFile()" class="btn btn-sm btn-primary" :disabled="!currentTabModified">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
-                        Save
-                    </button>
-                </div>
-                <div class="toolbar-group toolbar-format">
-                    <button @click="formatBold()" class="btn btn-icon" title="Bold (Ctrl+B)"><strong>B</strong></button>
-                    <button @click="formatItalic()" class="btn btn-icon" title="Italic (Ctrl+I)"><em>I</em></button>
-                    <button @click="formatStrike()" class="btn btn-icon" title="Strikethrough"><s>S</s></button>
-                    <div class="toolbar-divider"></div>
-                    <button @click="formatHeader(1)" class="btn btn-icon" title="Heading 1">H1</button>
-                    <button @click="formatHeader(2)" class="btn btn-icon" title="Heading 2">H2</button>
-                    <button @click="formatHeader(3)" class="btn btn-icon" title="Heading 3">H3</button>
-                    <div class="toolbar-divider"></div>
-                    <button @click="formatLink()" class="btn btn-icon" title="Link (Ctrl+K)">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-                    </button>
-                    <button @click="formatImage()" class="btn btn-icon" title="Image">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                    </button>
-                    <button @click="formatCode()" class="btn btn-icon" title="Code">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                    </button>
-                    <button @click="formatList()" class="btn btn-icon" title="List">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                    </button>
-                    <button @click="formatQuote()" class="btn btn-icon" title="Quote">
-                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z"/></svg>
-                    </button>
-                </div>
-                <div class="toolbar-group">
-                    <select @change="insertShortcodeByName($event.target.value); $event.target.value = ''" class="shortcode-select">
-                        <option value="">+ Shortcode</option>
-                        <template x-for="sc in shortcodes" :key="sc.name">
-                            <option :value="sc.name" x-text="sc.name"></option>
-                        </template>
-                    </select>
-                </div>
+      <!-- Editor Panel -->
+      <section class="editor-panel" :style="{ width: editorWidth + 'px' }">
+        <!-- Tabs -->
+        <div class="editor-tabs">
+          <template x-for="tab in tabs" :key="tab.path">
+            <div
+              class="tab"
+              :class="{ active: activeTab === tab.path, modified: tab.modified }"
+              @click="switchTab(tab.path)"
+            >
+              <span class="tab-icon" x-html="getFileIcon(tab.type)"></span>
+              <span class="tab-name" x-text="tab.name"></span>
+              <span x-show="tab.modified" class="tab-modified">●</span>
+              <button @click.stop="closeTab(tab.path)" class="tab-close">
+                ×
+              </button>
             </div>
+          </template>
+        </div>
 
-            <!-- Editor Container -->
-            <div class="editor-container">
-                <div x-show="tabs.length === 0" class="editor-empty">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                        <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
-                    </svg>
-                    <p>Select a file to edit</p>
-                </div>
-                <div id="monaco-editor" x-show="tabs.length > 0"></div>
-            </div>
-        </section>
+        <!-- Toolbar -->
+        <div class="editor-toolbar" x-show="tabs.length > 0">
+          <div class="toolbar-group">
+            <button
+              @click="saveCurrentFile()"
+              class="btn btn-sm btn-primary"
+              :disabled="!currentTabModified"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
+                />
+                <path d="M17 21v-8H7v8M7 3v5h8" />
+              </svg>
+              Save
+            </button>
+          </div>
+          <div class="toolbar-group toolbar-format">
+            <button
+              @click="formatBold()"
+              class="btn btn-icon"
+              title="Bold (Ctrl+B)"
+            >
+              <strong>B</strong>
+            </button>
+            <button
+              @click="formatItalic()"
+              class="btn btn-icon"
+              title="Italic (Ctrl+I)"
+            >
+              <em>I</em>
+            </button>
+            <button
+              @click="formatStrike()"
+              class="btn btn-icon"
+              title="Strikethrough"
+            >
+              <s>S</s>
+            </button>
+            <div class="toolbar-divider"></div>
+            <button
+              @click="formatHeader(1)"
+              class="btn btn-icon"
+              title="Heading 1"
+            >
+              H1
+            </button>
+            <button
+              @click="formatHeader(2)"
+              class="btn btn-icon"
+              title="Heading 2"
+            >
+              H2
+            </button>
+            <button
+              @click="formatHeader(3)"
+              class="btn btn-icon"
+              title="Heading 3"
+            >
+              H3
+            </button>
+            <div class="toolbar-divider"></div>
+            <button
+              @click="formatLink()"
+              class="btn btn-icon"
+              title="Link (Ctrl+K)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"
+                />
+                <path
+                  d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"
+                />
+              </svg>
+            </button>
+            <button @click="formatImage()" class="btn btn-icon" title="Image">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="M21 15l-5-5L5 21" />
+              </svg>
+            </button>
+            <button @click="formatCode()" class="btn btn-icon" title="Code">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
+              </svg>
+            </button>
+            <button @click="formatList()" class="btn btn-icon" title="List">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+            </button>
+            <button @click="formatQuote()" class="btn btn-icon" title="Quote">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z" />
+              </svg>
+            </button>
+          </div>
+          <div class="toolbar-group">
+            <select
+              @change="insertShortcodeByName($event.target.value); $event.target.value = ''"
+              class="shortcode-select"
+            >
+              <option value="">+ Shortcode</option>
+              <template x-for="sc in shortcodes" :key="sc.name">
+                <option :value="sc.name" x-text="sc.name"></option>
+              </template>
+            </select>
+          </div>
+        </div>
 
-        <!-- Resize Handle -->
-        <div class="resize-handle preview-resize" @mousedown="startResize($event, 'editor')"></div>
+        <!-- Editor Container -->
+        <div class="editor-container">
+          <div x-show="tabs.length === 0" class="editor-empty">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+            </svg>
+            <p>Select a file to edit</p>
+          </div>
+          <div id="monaco-editor" x-show="tabs.length > 0"></div>
+        </div>
+      </section>
 
-        <!-- Preview Panel -->
-        <section class="preview-panel">
-            <div class="preview-header">
-                <span>Preview</span>
-                <div class="preview-actions">
-                    <button @click="refreshPreview()" class="btn btn-icon" title="Refresh Preview">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-                    </button>
-                    <button @click="openPreviewExternal()" class="btn btn-icon" title="Open in new tab">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                    </button>
-                </div>
-            </div>
-            <div class="preview-container">
-                <iframe 
-                    id="preview-frame"
-                    :src="previewUrl"
-                    @load="previewLoaded()"
-                ></iframe>
-                <div x-show="!previewReady" class="preview-loading">
-                    <div class="spinner"></div>
-                    <p>Waiting for Hugo server...</p>
-                </div>
-            </div>
-        </section>
+      <!-- Resize Handle -->
+      <div
+        class="resize-handle preview-resize"
+        @mousedown="startResize($event, 'editor')"
+      ></div>
+
+      <!-- Preview Panel -->
+      <section class="preview-panel">
+        <div class="preview-header">
+          <span>Preview</span>
+          <div class="preview-actions">
+            <button
+              @click="refreshPreview()"
+              class="btn btn-icon"
+              title="Refresh Preview"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M23 4v6h-6M1 20v-6h6" />
+                <path
+                  d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"
+                />
+              </svg>
+            </button>
+            <button
+              @click="openPreviewExternal()"
+              class="btn btn-icon"
+              title="Open in new tab"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"
+                />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="preview-container">
+          <iframe
+            id="preview-frame"
+            :src="previewUrl"
+            @load="previewLoaded()"
+          ></iframe>
+          <div x-show="!previewReady" class="preview-loading">
+            <div class="spinner"></div>
+            <p>Waiting for Hugo server...</p>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- Logs Panel -->
     <div class="logs-panel" :class="{ open: showLogs }">
-        <div class="logs-header">
-            <span>Hugo Logs</span>
-            <button @click="clearLogs()" class="btn btn-sm">Clear</button>
-            <button @click="toggleLogs()" class="btn btn-icon">×</button>
-        </div>
-        <div class="logs-content" id="logs-container">
-            <template x-for="(log, index) in logs" :key="index">
-                <div class="log-entry" :class="'log-' + log.type">
-                    <span class="log-time" x-text="formatTime(log.time)"></span>
-                    <span class="log-message" x-text="log.message"></span>
-                </div>
-            </template>
-        </div>
+      <div class="logs-header">
+        <span>Hugo Logs</span>
+        <button @click="clearLogs()" class="btn btn-sm">Clear</button>
+        <button @click="toggleLogs()" class="btn btn-icon">×</button>
+      </div>
+      <div class="logs-content" id="logs-container">
+        <template x-for="(log, index) in logs" :key="index">
+          <div class="log-entry" :class="'log-' + log.type">
+            <span class="log-time" x-text="formatTime(log.time)"></span>
+            <span class="log-message" x-text="log.message"></span>
+          </div>
+        </template>
+      </div>
     </div>
 
     <!-- Image Upload Modal -->
-    <div class="modal" x-show="showImageModal" @click.self="showImageModal = false" x-cloak>
-        <div class="modal-content modal-lg">
-            <div class="modal-header">
-                <h3>Upload Image</h3>
-                <button @click="showImageModal = false" class="btn btn-icon">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="upload-zone" 
-                     @dragover.prevent="dragOver = true" 
-                     @dragleave="dragOver = false"
-                     @drop.prevent="handleDrop($event)"
-                     :class="{ 'drag-over': dragOver }">
-                    <input type="file" id="image-input" accept="image/*" @change="handleImageSelect($event)" hidden>
-                    <label for="image-input" class="upload-label">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        <span>Drop image here or click to select</span>
-                    </label>
-                </div>
-
-                <div x-show="imagePreview" class="image-preview-container">
-                    <img :src="imagePreview" alt="Preview" class="image-preview">
-                </div>
-
-                <div x-show="imageFile" class="upload-options">
-                    <div class="form-group">
-                        <label>Folder</label>
-                        <select x-model="uploadOptions.folder">
-                            <template x-for="folder in imageFolders" :key="folder.name">
-                                <option :value="folder.name" x-text="folder.name"></option>
-                            </template>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Filename</label>
-                        <input type="text" x-model="uploadOptions.filename">
-                    </div>
-                    <div class="form-group">
-                        <label>Preset</label>
-                        <select x-model="uploadOptions.preset" @change="applyPreset()">
-                            <template x-for="preset in imagePresets" :key="preset.name">
-                                <option :value="preset.name" x-text="preset.name"></option>
-                            </template>
-                        </select>
-                    </div>
-                    <div class="form-group" x-show="uploadOptions.preset === 'Custom'">
-                        <label>Custom widths (comma separated)</label>
-                        <input type="text" x-model="uploadOptions.customWidths" placeholder="320, 640, 1024">
-                    </div>
-                    <div class="form-group">
-                        <label>Quality: <span x-text="uploadOptions.quality"></span>%</label>
-                        <input type="range" min="1" max="100" x-model="uploadOptions.quality">
-                    </div>
-                </div>
-
-                <div x-show="uploadResult" class="upload-result">
-                    <h4>Generated Images</h4>
-                    <div class="variant-list">
-                        <template x-for="v in uploadResult?.variants || []" :key="v.filename">
-                            <div class="variant-item">
-                                <span x-text="v.filename"></span>
-                                <span class="variant-size" x-text="formatBytes(v.size)"></span>
-                            </div>
-                        </template>
-                    </div>
-                    <div class="form-group">
-                        <label>Shortcode (for Hugo)</label>
-                        <div class="code-block">
-                            <code x-text="uploadResult?.shortcode"></code>
-                            <button @click="copyToClipboard(uploadResult?.shortcode)" class="btn btn-sm">Copy</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>HTML (for direct use)</label>
-                        <div class="code-block">
-                            <code x-text="uploadResult?.html"></code>
-                            <button @click="copyToClipboard(uploadResult?.html)" class="btn btn-sm">Copy</button>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Srcset (raw)</label>
-                        <div class="code-block">
-                            <code x-text="uploadResult?.srcset"></code>
-                            <button @click="copyToClipboard(uploadResult?.srcset)" class="btn btn-sm">Copy</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button @click="showImageModal = false" class="btn">Cancel</button>
-                <button @click="uploadImage()" class="btn btn-primary" :disabled="!imageFile || uploading">
-                    <span x-show="!uploading">Upload & Process</span>
-                    <span x-show="uploading">Processing...</span>
-                </button>
-            </div>
+    <div
+      class="modal"
+      x-show="showImageModal"
+      @click.self="showImageModal = false"
+      x-cloak
+    >
+      <div class="modal-content modal-lg">
+        <div class="modal-header">
+          <h3>Upload Image</h3>
+          <button @click="showImageModal = false" class="btn btn-icon">
+            ×
+          </button>
         </div>
+        <div class="modal-body">
+          <div
+            class="upload-zone"
+            @dragover.prevent="dragOver = true"
+            @dragleave="dragOver = false"
+            @drop.prevent="handleDrop($event)"
+            :class="{ 'drag-over': dragOver }"
+          >
+            <input
+              type="file"
+              id="image-input"
+              accept="image/*"
+              @change="handleImageSelect($event)"
+              hidden
+            />
+            <label for="image-input" class="upload-label">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <span>Drop image here or click to select</span>
+            </label>
+          </div>
+
+          <div x-show="imagePreview" class="image-preview-container">
+            <img :src="imagePreview" alt="Preview" class="image-preview" />
+          </div>
+
+          <div x-show="imageFile" class="upload-options">
+            <div class="form-group">
+              <label>Folder</label>
+              <select x-model="uploadOptions.folder">
+                <template x-for="folder in imageFolders" :key="folder.name">
+                  <option :value="folder.name" x-text="folder.name"></option>
+                </template>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Filename</label>
+              <input type="text" x-model="uploadOptions.filename" />
+            </div>
+            <div class="form-group">
+              <label>Preset</label>
+              <select x-model="uploadOptions.preset" @change="applyPreset()">
+                <template x-for="preset in imagePresets" :key="preset.name">
+                  <option :value="preset.name" x-text="preset.name"></option>
+                </template>
+              </select>
+            </div>
+            <div class="form-group" x-show="uploadOptions.preset === 'Custom'">
+              <label>Custom widths (comma separated)</label>
+              <input
+                type="text"
+                x-model="uploadOptions.customWidths"
+                placeholder="320, 640, 1024"
+              />
+            </div>
+            <div class="form-group">
+              <label
+                >Quality: <span x-text="uploadOptions.quality"></span>%</label
+              >
+              <input
+                type="range"
+                min="1"
+                max="100"
+                x-model="uploadOptions.quality"
+              />
+            </div>
+          </div>
+
+          <div x-show="uploadResult" class="upload-result">
+            <h4>Generated Images</h4>
+            <div class="variant-list">
+              <template
+                x-for="v in uploadResult?.variants || []"
+                :key="v.filename"
+              >
+                <div class="variant-item">
+                  <span x-text="v.filename"></span>
+                  <span
+                    class="variant-size"
+                    x-text="formatBytes(v.size)"
+                  ></span>
+                </div>
+              </template>
+            </div>
+            <div class="form-group">
+              <label>Shortcode (for Hugo)</label>
+              <div class="code-block">
+                <code x-text="uploadResult?.shortcode"></code>
+                <button
+                  @click="copyToClipboard(uploadResult?.shortcode)"
+                  class="btn btn-sm"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>HTML (for direct use)</label>
+              <div class="code-block">
+                <code x-text="uploadResult?.html"></code>
+                <button
+                  @click="copyToClipboard(uploadResult?.html)"
+                  class="btn btn-sm"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Srcset (raw)</label>
+              <div class="code-block">
+                <code x-text="uploadResult?.srcset"></code>
+                <button
+                  @click="copyToClipboard(uploadResult?.srcset)"
+                  class="btn btn-sm"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="showImageModal = false" class="btn">Cancel</button>
+          <button
+            @click="uploadImage()"
+            class="btn btn-primary"
+            :disabled="!imageFile || uploading"
+          >
+            <span x-show="!uploading">Upload & Process</span>
+            <span x-show="uploading">Processing...</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- New File Modal -->
-    <div class="modal" x-show="showNewFile" @click.self="showNewFile = false" x-cloak>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>New File</h3>
-                <button @click="showNewFile = false" class="btn btn-icon">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Path (relative to project root)</label>
-                    <input type="text" x-model="newFilePath" placeholder="content/blog/new-post.md" @keydown.enter="createNewFile()">
-                </div>
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" x-model="newFileIsDir">
-                        Create as directory
-                    </label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button @click="showNewFile = false" class="btn">Cancel</button>
-                <button @click="createNewFile()" class="btn btn-primary">Create</button>
-            </div>
+    <div
+      class="modal"
+      x-show="showNewFile"
+      @click.self="showNewFile = false"
+      x-cloak
+    >
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>New File</h3>
+          <button @click="showNewFile = false" class="btn btn-icon">×</button>
         </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Path (relative to project root)</label>
+            <input
+              type="text"
+              x-model="newFilePath"
+              placeholder="content/blog/new-post.md"
+              @keydown.enter="createNewFile()"
+            />
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" x-model="newFileIsDir" />
+              Create as directory
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="showNewFile = false" class="btn">Cancel</button>
+          <button @click="createNewFile()" class="btn btn-primary">
+            Create
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- File Selector Modal (for shortcode file params) -->
-    <div class="modal" x-show="showFileSelector" @click.self="showFileSelector = false" x-cloak>
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Select File</h3>
-                <button @click="showFileSelector = false" class="btn btn-icon">×</button>
-            </div>
-            <div class="modal-body">
-                <input type="text" x-model="fileSelectorSearch" placeholder="Search files..." class="search-input">
-                <div class="file-selector-list">
-                    <template x-for="file in filteredDataFiles" :key="file.path">
-                        <div class="file-selector-item" @click="selectDataFile(file)">
-                            <span x-text="file.name"></span>
-                            <small x-text="file.path"></small>
-                        </div>
-                    </template>
-                </div>
-            </div>
+    <div
+      class="modal"
+      x-show="showFileSelector"
+      @click.self="showFileSelector = false"
+      x-cloak
+    >
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Select File</h3>
+          <button @click="showFileSelector = false" class="btn btn-icon">
+            ×
+          </button>
         </div>
+        <div class="modal-body">
+          <input
+            type="text"
+            x-model="fileSelectorSearch"
+            placeholder="Search files..."
+            class="search-input"
+          />
+          <div class="file-selector-list">
+            <template x-for="file in filteredDataFiles" :key="file.path">
+              <div class="file-selector-item" @click="selectDataFile(file)">
+                <span x-text="file.name"></span>
+                <small x-text="file.path"></small>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Toast notifications -->
     <div class="toast-container">
-        <template x-for="toast in toasts" :key="toast.id">
-            <div class="toast" :class="'toast-' + toast.type" x-show="toast.visible" x-transition>
-                <span x-text="toast.message"></span>
-            </div>
-        </template>
+      <template x-for="toast in toasts" :key="toast.id">
+        <div
+          class="toast"
+          :class="'toast-' + toast.type"
+          x-show="toast.visible"
+          x-transition
+        >
+          <span x-text="toast.message"></span>
+        </div>
+      </template>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
-    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    <script src="/static/js/app.js"></script>
-</body>
+    <script type="module" src="/static/dist/js/app.js"></script>
+  </body>
 </html>

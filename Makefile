@@ -7,13 +7,21 @@ LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.buildTime=$(BUILD_TIME)"
 # Default target
 all: build
 
+# Build web assets with Vite
+web:
+	cd web && npm install && npm run build
+
 # Build the binary
-build:
+build: web
 	go build $(LDFLAGS) -o build/hugo-manager ./cmd/hugo-manager
 
 # Build with smaller binary size
-build-small:
+build-small: web
 	go build $(LDFLAGS) -ldflags "-s -w" -o build/hugo-manager ./cmd/hugo-manager
+
+# Build Go only (skip web build)
+build-go:
+	go build $(LDFLAGS) -o build/hugo-manager ./cmd/hugo-manager
 
 # Run in development
 run:
@@ -23,6 +31,8 @@ run:
 clean:
 	rm -rf build/
 	rm -rf dist/
+	rm -rf web/dist/
+	rm -rf web/node_modules/
 
 # Install dependencies
 deps:

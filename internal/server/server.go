@@ -73,12 +73,12 @@ func (s *Server) Start(addr string) error {
 	mux.HandleFunc("/api/config", s.handleConfig)
 	mux.HandleFunc("/api/data/", s.handleDataFiles)
 
-	// Static files from embedded FS
-	staticFS, err := fs.Sub(s.webFS, "static")
+	// Static files from Vite build output
+	distFS, err := fs.Sub(s.webFS, "dist")
 	if err != nil {
-		return fmt.Errorf("failed to get static fs: %w", err)
+		return fmt.Errorf("failed to get dist fs: %w", err)
 	}
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+	mux.Handle("/static/dist/", http.StripPrefix("/static/dist/", http.FileServer(http.FS(distFS))))
 
 	// Main page
 	mux.HandleFunc("/", s.handleIndex)
