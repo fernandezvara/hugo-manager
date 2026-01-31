@@ -1,49 +1,11 @@
 // Hugo Manager - Main Application (ES Module)
-import * as monaco from 'monaco-editor';
-
-// Configure Monaco workers
-self.MonacoEnvironment = {
-  getWorker: function (workerId, label) {
-    const getWorkerModule = (moduleUrl, label) => {
-      return new Worker(self.MonacoEnvironment.getWorkerUrl(moduleUrl), {
-        name: label,
-        type: 'module'
-      });
-    };
-    switch (label) {
-      case 'json':
-        return getWorkerModule('/monaco-editor/esm/vs/language/json/json.worker?worker', label);
-      case 'css':
-      case 'scss':
-      case 'less':
-        return getWorkerModule('/monaco-editor/esm/vs/language/css/css.worker?worker', label);
-      case 'html':
-      case 'handlebars':
-      case 'razor':
-        return getWorkerModule('/monaco-editor/esm/vs/language/html/html.worker?worker', label);
-      case 'typescript':
-      case 'javascript':
-        return getWorkerModule('/monaco-editor/esm/vs/language/typescript/ts.worker?worker', label);
-      default:
-        return getWorkerModule('/monaco-editor/esm/vs/editor/editor.worker?worker', label);
-    }
-  }
-};
-
-// Define custom theme
-monaco.editor.defineTheme('hugo-dark', {
-  base: 'vs-dark',
-  inherit: true,
-  rules: [],
-  colors: {
-    'editor.background': '#1a1d23',
-    'editor.foreground': '#e4e7eb',
-    'editorLineNumber.foreground': '#6b7280',
-    'editorLineNumber.activeForeground': '#9ca3af',
-    'editor.selectionBackground': '#3b82f640',
-    'editor.lineHighlightBackground': '#22262e'
-  }
-});
+import { EditorView } from '@codemirror/view';
+import { EditorState } from '@codemirror/state';
+import { markdown } from '@codemirror/lang-markdown';
+import { oneDark } from '@codemirror/theme-one-dark';
+import { lineNumbers } from '@codemirror/view';
+import { keymap } from '@codemirror/view';
+import { defaultKeymap } from '@codemirror/commands';
 
 export function createApp() {
   return {
@@ -57,7 +19,6 @@ export function createApp() {
     showImageModal: false,
     showNewFile: false,
     showFileSelector: false,
-    shortcodesExpanded: true,
     dragOver: false,
     
     // File Tree
@@ -172,44 +133,90 @@ export function createApp() {
     },
 
     switchTab(path) {
+      console.log('[DEBUG] switchTab called with path:', path);
+      
+      // Save current editor content to the current tab before switching
+      if (this.editor && this.activeTab) {
+        const currentTab = this.tabs.find(t => t.path === this.activeTab);
+        if (currentTab) {
+          currentTab.content = this.editor.state.doc.toString();
+        }
+      }
+      
       this.activeTab = path;
       const tab = this.tabs.find(t => t.path === path);
-      if (!tab) return;
-
-      // Create editor if it doesn't exist yet
-      if (!this.editor && this.monacoLoaded) {
-        this.editor = monaco.editor.create(document.getElementById('monaco-editor'), {
-          theme: this.config.editor?.theme || 'hugo-dark',
-          fontSize: this.config.editor?.fontSize || 14,
-          tabSize: this.config.editor?.tabSize || 2,
-          wordWrap: this.config.editor?.wordWrap ? 'on' : 'off',
-          minimap: { enabled: this.config.editor?.minimap || false },
-          automaticLayout: true,
-          scrollBeyondLastLine: false,
-          renderWhitespace: 'selection',
-          fontFamily: "'SF Mono', 'Fira Code', 'Consolas', monospace",
-          fontLigatures: true
-        });
-
-        // Track changes
-        this.editor.onDidChangeModelContent(() => {
-          const tab = this.tabs.find(t => t.path === this.activeTab);
-          if (tab && this.editor.getValue() !== tab.originalContent) {
-            tab.modified = true;
-          }
-        });
+      if (!tab) {
+        console.log('[DEBUG] No tab found, returning');
+        return;
       }
 
-      // Get or create Monaco model
-      let model = this.editorModels[path];
-      if (!model) {
-        const language = this.getMonacoLanguage(tab.type);
-        model = monaco.editor.createModel(tab.content, language);
-        this.editorModels[path] = model;
-      }
+      console.log('[DEBUG] Tab found, creating CodeMirror editor...');
+      
+      // Wait for Alpine to update the DOM (show the container) before creating editor
+      this.$nextTick(() => {
+        console.log('[DEBUG] In nextTick callback');
+        // Create editor if it doesn't exist yet
+        if (!this.editor) {
+          console.log('[DEBUG] Creating CodeMirror editor...');
+          const container = document.getElementById('monaco-editor');
+          console.log('[DEBUG] Container element:', container, 'display:', container?.style?.display);
+          
+          const startState = EditorState.create({
+            doc: tab.content,
+            extensions: [
+              lineNumbers(),
+              markdown(),
+              oneDark,
+              keymap.of(defaultKeymap),
+              EditorView.theme({
+                "&": {
+                  fontSize: this.config.editor?.fontSize || "14px",
+                  fontFamily: "'SF Mono', 'Fira Code', 'Consolas', monospace",
+                  height: "100%"
+                },
+                ".cm-content": {
+                  padding: "12px"
+                },
+                ".cm-scroller": {
+                  overflow: "auto"
+                },
+                ".cm-focused": {
+                  outline: "none"
+                }
+              }),
+              EditorView.updateListener.of((update) => {
+                if (update.docChanged) {
+                  const tab = this.tabs.find(t => t.path === this.activeTab);
+                  if (tab) {
+                    tab.content = update.state.doc.toString();
+                    tab.modified = update.state.doc.toString() !== tab.originalContent;
+                  }
+                }
+              })
+            ]
+          });
+          
+          this.editor = new EditorView({
+            state: startState,
+            parent: container
+          });
+          console.log('[DEBUG] CodeMirror editor created:', this.editor);
+        } else {
+          // Update existing editor content
+          console.log('[DEBUG] Updating CodeMirror content...');
+          this.editor.dispatch({
+            changes: {
+              from: 0,
+              to: this.editor.state.doc.length,
+              insert: tab.content
+            }
+          });
+        }
 
-      this.editor.setModel(model);
-      this.updatePreviewUrl(path);
+        console.log('[DEBUG] Updating preview URL...');
+        this.updatePreviewUrl(path);
+        console.log('[DEBUG] switchTab complete');
+      });
     },
 
     closeTab(path) {
@@ -242,7 +249,7 @@ export function createApp() {
       const tab = this.tabs.find(t => t.path === this.activeTab);
       if (!tab) return;
 
-      const content = this.editor.getValue();
+      const content = this.editor.state.doc.toString();
 
       try {
         const res = await fetch(`/api/files/${encodeURIComponent(tab.path)}`, {
@@ -341,13 +348,14 @@ Content goes here...
         return;
       }
 
-      const selection = this.editor.getSelection();
-      this.editor.executeEdits('shortcode', [{
-        range: selection,
-        text: sc.template,
-        forceMoveMarkers: true
-      }]);
-      this.editor.focus();
+      const view = this.editor;
+      view.dispatch(view.state.changeByRange(range => {
+        return {
+          changes: {from: range.from, to: range.to, insert: sc.template},
+          range: {from: range.from + sc.template.length, to: range.from + sc.template.length}
+        };
+      }));
+      view.focus();
     },
 
     insertShortcodeByName(name) {
@@ -369,33 +377,49 @@ Content goes here...
       this.wrapSelection('~~', '~~');
     },
 
+    formatUnderline() {
+      this.wrapSelection('<u>', '</u>');
+    },
+
     formatHeader(level) {
       const prefix = '#'.repeat(level) + ' ';
       this.prefixLine(prefix);
     },
 
     formatLink() {
-      const selection = this.editor.getSelection();
-      const text = this.editor.getModel().getValueInRange(selection) || 'link text';
-      this.editor.executeEdits('format', [{
-        range: selection,
-        text: `[${text}](url)`,
-        forceMoveMarkers: true
-      }]);
+      if (!this.editor) return;
+      
+      const view = this.editor;
+      view.dispatch(view.state.changeByRange(range => {
+        const text = view.state.sliceDoc(range.from, range.to) || 'link text';
+        const insert = `[${text}](url)`;
+        return {
+          changes: {from: range.from, to: range.to, insert},
+          range: {from: range.from + text.length + 3, to: range.from + text.length + 6}
+        };
+      }));
     },
 
     formatImage() {
-      const selection = this.editor.getSelection();
-      this.editor.executeEdits('format', [{
-        range: selection,
-        text: '![alt text](/images/)',
-        forceMoveMarkers: true
-      }]);
+      if (!this.editor) return;
+      
+      const view = this.editor;
+      view.dispatch(view.state.changeByRange(range => {
+        const insert = '![alt text](/images/)';
+        return {
+          changes: {from: range.from, to: range.to, insert},
+          range: {from: range.from + 11, to: range.from + 20}
+        };
+      }));
     },
 
     formatCode() {
-      const selection = this.editor.getSelection();
-      const text = this.editor.getModel().getValueInRange(selection);
+      if (!this.editor) return;
+      
+      const text = this.editor.state.sliceDoc(
+        this.editor.state.selection.main.from,
+        this.editor.state.selection.main.to
+      );
       const isMultiline = text.includes('\n');
       
       if (isMultiline) {
@@ -415,33 +439,56 @@ Content goes here...
 
     wrapSelection(before, after) {
       if (!this.editor) return;
-      const selection = this.editor.getSelection();
-      const text = this.editor.getModel().getValueInRange(selection);
-      this.editor.executeEdits('format', [{
-        range: selection,
-        text: before + text + after,
-        forceMoveMarkers: true
-      }]);
-      this.editor.focus();
+      
+      const view = this.editor;
+      view.dispatch(view.state.changeByRange(range => {
+        const text = view.state.sliceDoc(range.from, range.to);
+        if (text) {
+          // Wrap selected text
+          return {
+            changes: {from: range.from, to: range.to, insert: before + text + after},
+            range: {from: range.from, to: range.from + before.length + text.length + after.length}
+          };
+        } else {
+          // Insert at cursor and place cursor between wrappers
+          return {
+            changes: {from: range.from, insert: before + after},
+            range: {from: range.from + before.length, to: range.from + before.length}
+          };
+        }
+      }));
     },
 
     prefixLine(prefix) {
       if (!this.editor) return;
-      const selection = this.editor.getSelection();
       
-      const startLine = selection.startLineNumber;
-      const endLine = selection.endLineNumber;
+      const state = this.editor.state;
+      const doc = state.doc;
       
-      const edits = [];
-      for (let line = startLine; line <= endLine; line++) {
-        edits.push({
-          range: new monaco.Range(line, 1, line, 1),
-          text: prefix,
-          forceMoveMarkers: true
+      // Handle empty document
+      if (doc.length === 0) {
+        this.editor.dispatch({
+          changes: {from: 0, to: 0, insert: prefix}
+        });
+        this.editor.focus();
+        return;
+      }
+      
+      // Get line boundaries for selection
+      const fromLine = doc.lineAt(state.selection.main.from);
+      const toLine = doc.lineAt(state.selection.main.to);
+      
+      const changes = [];
+      for (let lineNum = fromLine.number; lineNum <= toLine.number; lineNum++) {
+        const line = doc.line(lineNum);
+        changes.push({
+          from: line.from,
+          to: line.from,
+          insert: prefix
         });
       }
       
-      this.editor.executeEdits('format', edits);
+      this.editor.dispatch({changes});
       this.editor.focus();
     },
 

@@ -153,36 +153,6 @@
             <div x-html="renderTreeItem(item, 0)"></div>
           </template>
         </div>
-
-        <!-- Shortcodes Panel -->
-        <div class="shortcodes-panel">
-          <h4
-            @click="shortcodesExpanded = !shortcodesExpanded"
-            class="panel-header"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              :class="{ rotated: shortcodesExpanded }"
-            >
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-            Shortcodes
-          </h4>
-          <div x-show="shortcodesExpanded" class="shortcodes-list">
-            <template x-for="sc in shortcodes" :key="sc.name">
-              <button
-                @click="insertShortcode(sc)"
-                class="shortcode-btn"
-                :title="sc.name"
-              >
-                <span x-text="sc.name"></span>
-              </button>
-            </template>
-          </div>
-        </div>
       </aside>
 
       <!-- Resize Handle -->
@@ -254,6 +224,13 @@
               title="Strikethrough"
             >
               <s>S</s>
+            </button>
+            <button
+              @click="formatUnderline()"
+              class="btn btn-icon"
+              title="Underline"
+            >
+              <u>U</u>
             </button>
             <div class="toolbar-divider"></div>
             <button
