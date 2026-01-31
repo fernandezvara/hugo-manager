@@ -6,7 +6,7 @@ A web-based management interface for Hugo static sites. Edit content, manage ima
 
 ## Features
 
-- **Monaco Editor** - Full-featured code editor with syntax highlighting for Markdown, YAML, HTML, and more
+- **CodeMirror 6** - Lightweight, modern code editor with syntax highlighting for Markdown, YAML, HTML, and more
 - **Live Preview** - See your changes instantly in the integrated Hugo preview
 - **Image Processing** - Upload images and automatically generate responsive srcset variants
 - **Shortcode Detection** - Automatically detects your Hugo shortcodes and provides insertion helpers with parameter hints
@@ -91,11 +91,11 @@ hugo:
 
 # Editor settings
 editor:
-  theme: vs-dark # Monaco theme
+  theme: one-dark # one-dark, light
   font_size: 14
   tab_size: 2
   word_wrap: true
-  minimap: false
+  line_numbers: true
 
 # Image processing
 images:
@@ -205,6 +205,7 @@ inner content
 | `Ctrl/Cmd + B` | Bold        |
 | `Ctrl/Cmd + I` | Italic      |
 | `Ctrl/Cmd + K` | Insert link |
+| `Ctrl/Cmd + U` | Underline   |
 
 ## API Endpoints
 
