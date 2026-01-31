@@ -14,13 +14,13 @@ hugo:
     - "--bind"
     - "0.0.0.0"
 
-# Editor settings (Monaco Editor)
+# Editor settings
 editor:
-  theme: vs-dark           # vs-dark, vs, hc-black
+  theme: one-dark          # one-dark, light
   font_size: 14
   tab_size: 2
   word_wrap: true
-  minimap: false
+  line_numbers: true
   auto_save: false
   auto_save_delay: 1000    # milliseconds
 

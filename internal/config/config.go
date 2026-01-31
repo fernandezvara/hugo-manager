@@ -34,7 +34,7 @@ type EditorConfig struct {
 	FontSize      int    `yaml:"font_size" json:"font_size"`
 	TabSize       int    `yaml:"tab_size" json:"tab_size"`
 	WordWrap      bool   `yaml:"word_wrap" json:"word_wrap"`
-	Minimap       bool   `yaml:"minimap" json:"minimap"`
+	LineNumbers   bool   `yaml:"line_numbers" json:"line_numbers"`
 	AutoSave      bool   `yaml:"auto_save" json:"auto_save"`
 	AutoSaveDelay int    `yaml:"auto_save_delay" json:"auto_save_delay"`
 }
@@ -71,11 +71,11 @@ func Default() *Config {
 			AdditionalArgs:    []string{"--bind", "0.0.0.0"},
 		},
 		Editor: EditorConfig{
-			Theme:         "vs-dark",
+			Theme:         "one-dark",
 			FontSize:      14,
 			TabSize:       2,
 			WordWrap:      true,
-			Minimap:       false,
+			LineNumbers:   true,
 			AutoSave:      false,
 			AutoSaveDelay: 1000,
 		},
