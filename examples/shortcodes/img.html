@@ -1,0 +1,50 @@
+{{/*
+  Responsive Image Shortcode
+  
+  This shortcode generates responsive images with srcset for optimal loading.
+  Works with images processed by Hugo Manager.
+  
+  Usage:
+    {{< img src="/images/personas/photo" alt="Description" >}}
+    {{< img src="/images/blog/header" alt="Blog header" class="featured" >}}
+    {{< img src="/images/hero" alt="Hero" srcset="/images/hero.320x180.jpg 320w, /images/hero.1920x1080.jpg 1920w" >}}
+  
+  Parameters:
+    - src: Path to the largest/default image
+    - alt: Alt text for accessibility (required)
+    - srcset: Optional explicit srcset (if not provided, uses src only)
+    - sizes: Custom sizes attribute (default: responsive)
+    - class: Optional CSS classes
+    - loading: "lazy" or "eager" (default: "lazy")
+    - width: Optional width attribute
+    - height: Optional height attribute
+*/}}
+
+{{- $src := .Get "src" -}}
+{{- $alt := .Get "alt" | default "" -}}
+{{- $srcset := .Get "srcset" | default "" -}}
+{{- $sizes := .Get "sizes" | default "(max-width: 640px) 100vw, (max-width: 1024px) 75vw, 50vw" -}}
+{{- $class := .Get "class" | default "" -}}
+{{- $loading := .Get "loading" | default "lazy" -}}
+{{- $width := .Get "width" | default "" -}}
+{{- $height := .Get "height" | default "" -}}
+
+<img 
+  src="{{ $src }}"
+  {{- if $srcset }}
+  srcset="{{ $srcset }}"
+  sizes="{{ $sizes }}"
+  {{- end }}
+  alt="{{ $alt }}"
+  {{- if $class }}
+  class="{{ $class }}"
+  {{- end }}
+  {{- if $width }}
+  width="{{ $width }}"
+  {{- end }}
+  {{- if $height }}
+  height="{{ $height }}"
+  {{- end }}
+  loading="{{ $loading }}"
+  decoding="async"
+>

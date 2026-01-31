@@ -1,0 +1,75 @@
+# Hugo Manager Configuration
+# Copy this file to your Hugo project root as hugo-manager.yaml
+
+# Web server settings
+server:
+  port: 8080
+
+# Hugo server settings
+hugo:
+  port: 1313
+  auto_start: true
+  disable_fast_render: true
+  additional_args:
+    - "--bind"
+    - "0.0.0.0"
+
+# Editor settings (Monaco Editor)
+editor:
+  theme: vs-dark           # vs-dark, vs, hc-black
+  font_size: 14
+  tab_size: 2
+  word_wrap: true
+  minimap: false
+  auto_save: false
+  auto_save_delay: 1000    # milliseconds
+
+# Image processing settings
+images:
+  base_dir: static/images  # Base directory for images
+  default_quality: 85      # JPEG quality (1-100)
+  output_format: jpg       # jpg, png, webp
+  
+  # Folders to show in upload dialog
+  folders:
+    - personas
+    - blog
+    - general
+    - instituciones
+  
+  # Size presets for responsive images
+  presets:
+    - name: Full responsive
+      widths: [320, 640, 1024, 1920]
+    - name: Mobile only
+      widths: [320, 640]
+    - name: Desktop only
+      widths: [1024, 1920]
+    - name: Thumbnail
+      widths: [150, 300]
+    - name: Social media
+      widths: [1200]
+    - name: Custom
+      widths: []
+
+# File tree configuration
+file_tree:
+  # Directories to show in the file tree
+  show_dirs:
+    - content
+    - layouts/shortcodes
+    - static
+    - data
+  
+  # Files to hide
+  hidden_files:
+    - .DS_Store
+    - Thumbs.db
+    - .gitignore
+  
+  # Directories to hide
+  hidden_dirs:
+    - .git
+    - node_modules
+    - public
+    - resources
