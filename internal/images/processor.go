@@ -221,6 +221,108 @@ func (p *Processor) Process(reader io.Reader, opts UploadOptions) (*ProcessResul
 	return result, nil
 }
 
+// ProcessExistingImage processes an existing image file with the given options
+func (p *Processor) ProcessExistingImage(sourcePath string, opts UploadOptions) (*ProcessResult, error) {
+	// Open the existing image file
+	file, err := os.Open(sourcePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open source image: %w", err)
+	}
+	defer file.Close()
+
+	// Decode the image
+	img, format, err := image.Decode(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	// Get image dimensions
+	origWidth := img.Bounds().Dx()
+	origHeight := img.Bounds().Dy()
+
+	// Create output directory
+	outputDir := filepath.Join(p.projectDir, opts.Folder)
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	// Extract base name from filename (without extension)
+	baseName := strings.TrimSuffix(opts.Filename, filepath.Ext(opts.Filename))
+
+	// Determine output format
+	outputFormat := p.config.OutputFormat
+	if outputFormat == "" {
+		outputFormat = format
+	}
+
+	// Initialize result
+	result := &ProcessResult{
+		Variants: []ProcessedImage{},
+	}
+
+	// Process each width
+	for _, targetWidth := range opts.Widths {
+		// Skip if target width is larger than original
+		if targetWidth > origWidth {
+			targetWidth = origWidth
+		}
+
+		// Calculate height maintaining aspect ratio
+		targetHeight := int(float64(origHeight) * float64(targetWidth) / float64(origWidth))
+
+		// Resize the image
+		resized := resize(img, targetWidth, targetHeight)
+
+		// Generate filename
+		ext := getExtension(outputFormat)
+		filename := fmt.Sprintf("%s.%dx%d%s", baseName, targetWidth, targetHeight, ext)
+		outputPath := filepath.Join(outputDir, filename)
+
+		// Save the image
+		if err := saveImage(resized, outputPath, outputFormat, opts.Quality); err != nil {
+			return nil, fmt.Errorf("failed to save image %s: %w", filename, err)
+		}
+
+		// Get file size
+		stat, _ := os.Stat(outputPath)
+		size := int64(0)
+		if stat != nil {
+			size = stat.Size()
+		}
+
+		// Calculate URL path
+		relPath, _ := filepath.Rel(p.projectDir, outputPath)
+		relPath = strings.TrimPrefix(relPath, "static")
+		urlPath := "/" + strings.ReplaceAll(relPath, "\\", "/")
+
+		variant := ProcessedImage{
+			Width:    targetWidth,
+			Height:   targetHeight,
+			Path:     relPath,
+			URL:      urlPath,
+			Size:     size,
+			Filename: filename,
+		}
+		result.Variants = append(result.Variants, variant)
+
+		// First (largest) is the original reference
+		if result.Original == "" {
+			result.Original = urlPath
+		}
+	}
+
+	// Generate srcset string
+	result.Srcset = p.generateSrcset(result.Variants)
+
+	// Generate shortcode
+	result.Shortcode = p.generateShortcode(baseName, result)
+
+	// Generate raw HTML
+	result.HTML = p.generateHTML(baseName, result)
+
+	return result, nil
+}
+
 // generateSrcset creates the srcset attribute value
 func (p *Processor) generateSrcset(variants []ProcessedImage) string {
 	var parts []string

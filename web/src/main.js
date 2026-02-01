@@ -79,6 +79,7 @@ export function createApp() {
       target: null,
       targetPath: "",
       isDirectory: false,
+      isImageFile: false,
     },
 
     // Directory Selection
@@ -132,6 +133,20 @@ export function createApp() {
     fileUploading: false,
     fileUploadFromContext: false,
     fileDragOver: false,
+
+    // Image Process
+    showProcessModal: false,
+    processOptions: {
+      sourcePath: "",
+      filename: "",
+      folder: "",
+      quality: 85,
+      preset: "Full responsive",
+      customWidths: "",
+    },
+    processResult: null,
+    processing: false,
+    processFromContext: false,
 
     // New File
     newFilePath: "",
@@ -711,6 +726,15 @@ Content goes here...
       this.contextMenu.target = item;
       this.contextMenu.targetPath = item.path;
       this.contextMenu.isDirectory = isDirectory;
+      
+      // Check if it's an image file
+      if (!isDirectory && item.name) {
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.svg'];
+        const extension = item.name.toLowerCase().substring(item.name.lastIndexOf('.'));
+        this.contextMenu.isImageFile = imageExtensions.includes(extension);
+      } else {
+        this.contextMenu.isImageFile = false;
+      }
 
       // Hide context menu when clicking elsewhere
       document.addEventListener("click", this.hideContextMenu);
@@ -767,6 +791,22 @@ Content goes here...
       this.fileUploadOptions.folder = this.contextMenu.targetPath;
       this.fileUploadFromContext = true;
       this.showFileModal = true;
+    },
+
+    contextMenuProcessImage() {
+      this.hideContextMenu();
+      // Use context directly - no API call needed
+      this.processOptions.sourcePath = this.contextMenu.targetPath;
+      this.processOptions.filename = this.contextMenu.target.name;
+      // Extract directory from source path for destination
+      const lastSlash = this.contextMenu.targetPath.lastIndexOf('/');
+      if (lastSlash > 0) {
+        this.processOptions.folder = this.contextMenu.targetPath.substring(0, lastSlash);
+      } else {
+        this.processOptions.folder = '';
+      }
+      this.processFromContext = true;
+      this.showProcessModal = true;
     },
 
     // Directory Selection
@@ -1229,6 +1269,61 @@ Content goes here...
         this.showToast("Failed to upload file", "error");
       } finally {
         this.fileUploading = false;
+      }
+    },
+
+    // Image Process Functions
+    async processImage() {
+      if (!this.processOptions.sourcePath) return;
+
+      this.processing = true;
+      this.processResult = null;
+
+      // Use FormData (consistent with other upload endpoints)
+      const formData = new FormData();
+      formData.append("sourcePath", this.processOptions.sourcePath);
+      formData.append("folder", this.processOptions.folder);
+      formData.append("filename", this.processOptions.filename);
+      formData.append("quality", this.processOptions.quality);
+      formData.append("preset", this.processOptions.preset);
+
+      // Get widths from preset
+      const preset = this.imagePresets.find(
+        (p) => p.name === this.processOptions.preset,
+      );
+      let widths = preset?.widths || [];
+
+      if (
+        this.processOptions.preset === "Custom" &&
+        this.processOptions.customWidths
+      ) {
+        widths = this.processOptions.customWidths
+          .split(",")
+          .map((w) => parseInt(w.trim()))
+          .filter((w) => w > 0);
+      }
+
+      if (widths.length > 0) {
+        formData.append("widths", widths.join(","));
+      }
+
+      try {
+        const res = await fetch("/api/images/process", {
+          method: "POST",
+          body: formData,  // FormData sets Content-Type automatically
+        });
+
+        const data = await res.json();
+        if (data.error) {
+          this.showToast(data.error, "error");
+        } else {
+          this.processResult = data;
+          this.showToast("Image processed successfully", "success");
+        }
+      } catch (err) {
+        this.showToast("Failed to process image", "error");
+      } finally {
+        this.processing = false;
       }
     },
 

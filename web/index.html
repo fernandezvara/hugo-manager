@@ -701,6 +701,138 @@
       </div>
     </div>
 
+    <!-- Image Process Modal -->
+    <div
+      class="modal"
+      x-show="showProcessModal"
+      @click.self="showProcessModal = false"
+      x-cloak
+    >
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Process Image</h3>
+          <button @click="showProcessModal = false" class="btn btn-icon">
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <!-- Source Image Info -->
+          <div class="form-group">
+            <label>Source Image</label>
+            <div class="context-folder-display">
+              <span x-text="processOptions.sourcePath || '...'"></span>
+            </div>
+          </div>
+
+          <!-- Target folder display - only show when from context -->
+          <div class="form-group" x-show="processFromContext">
+            <label>Process to</label>
+            <div class="context-folder-display">
+              <span x-text="processOptions.folder || '...'"></span>
+            </div>
+          </div>
+
+          <div x-show="processOptions.sourcePath" class="upload-options">
+            <div class="form-group">
+              <label>Filename</label>
+              <input type="text" x-model="processOptions.filename" />
+            </div>
+
+            <div class="form-group">
+              <label>Quality</label>
+              <input
+                type="number"
+                x-model="processOptions.quality"
+                min="1"
+                max="100"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Preset</label>
+              <select x-model="processOptions.preset">
+                <template x-for="preset in imagePresets" :key="preset.name">
+                  <option :value="preset.name" x-text="preset.name"></option>
+                </template>
+              </select>
+            </div>
+
+            <div class="form-group" x-show="processOptions.preset === 'Custom'">
+              <label>Custom Widths (comma-separated)</label>
+              <input
+                type="text"
+                x-model="processOptions.customWidths"
+                placeholder="320, 640, 1024"
+              />
+            </div>
+          </div>
+
+          <div x-show="processResult" class="upload-result">
+            <h4>✅ Image Processed Successfully!</h4>
+            <div class="form-group">
+              <label>Original</label>
+              <div class="code-block">
+                <code x-text="processResult?.original"></code>
+                <button
+                  @click="copyToClipboard(processResult?.original)"
+                  class="btn btn-sm"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Srcset</label>
+              <div class="code-block">
+                <code x-text="processResult?.srcset"></code>
+                <button
+                  @click="copyToClipboard(processResult?.srcset)"
+                  class="btn btn-sm"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Shortcode</label>
+              <div class="code-block">
+                <code x-text="processResult?.shortcode"></code>
+                <button
+                  @click="copyToClipboard(processResult?.shortcode)"
+                  class="btn btn-sm"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>HTML</label>
+              <div class="code-block">
+                <code x-text="processResult?.html"></code>
+                <button
+                  @click="copyToClipboard(processResult?.html)"
+                  class="btn btn-sm"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="showProcessModal = false" class="btn">Cancel</button>
+          <button
+            @click="processImage()"
+            class="btn btn-primary"
+            :disabled="!processOptions.sourcePath || processing"
+          >
+            <span x-show="!processing">Process Image</span>
+            <span x-show="processing">Processing...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- New File Modal -->
     <div
       class="modal"
@@ -976,6 +1108,13 @@
         📁 Upload File
       </div>
       <div class="context-menu-divider" x-show="contextMenu.isDirectory"></div>
+      <div
+        class="context-menu-item"
+        @click="contextMenuProcessImage()"
+        x-show="contextMenu.isImageFile"
+      >
+        ⚡ Process Image
+      </div>
       <div class="context-menu-item" @click="contextMenuRename()">
         ✏️ Rename
       </div>

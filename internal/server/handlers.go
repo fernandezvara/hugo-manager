@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -344,6 +345,98 @@ func (s *Server) handleFileUpload(w http.ResponseWriter, r *http.Request) {
 		"path":     filepath.Join(folder, filename),
 		"size":     header.Size,
 	}, http.StatusOK)
+}
+
+// handleImageProcess processes existing images
+func (s *Server) handleImageProcess(w http.ResponseWriter, r *http.Request) {
+	// Parse multipart form (max 50MB)
+	if err := r.ParseMultipartForm(50 << 20); err != nil {
+		s.jsonError(w, http.StatusBadRequest, "Failed to parse form data")
+		return
+	}
+
+	// Get source image path from form
+	sourcePath := r.FormValue("sourcePath")
+	if sourcePath == "" {
+		s.jsonError(w, http.StatusBadRequest, "sourcePath is required")
+		return
+	}
+
+	// Get target folder from form (required)
+	targetFolder := r.FormValue("folder")
+	if targetFolder == "" {
+		s.jsonError(w, http.StatusBadRequest, "folder is required for image processing")
+		return
+	}
+
+	// Get filename from form or use original filename
+	filename := r.FormValue("filename")
+	if filename == "" {
+		filename = filepath.Base(sourcePath)
+	}
+
+	// Get processing options
+	quality := r.FormValue("quality")
+	if quality == "" {
+		quality = "85"
+	}
+
+	preset := r.FormValue("preset")
+	if preset == "" {
+		preset = "Full responsive"
+	}
+
+	widths := r.FormValue("widths")
+
+	// Create full source path
+	fullSourcePath := filepath.Join(s.projectDir, sourcePath)
+
+	// Check if source file exists
+	if _, err := os.Stat(fullSourcePath); os.IsNotExist(err) {
+		s.jsonError(w, http.StatusBadRequest, "Source image file not found")
+		return
+	}
+
+	// Create processing options similar to upload but with existing file
+	opts := images.UploadOptions{
+		Folder:     targetFolder,
+		Filename:   filename,
+		Quality:    parseInt(quality),
+		PresetName: preset,
+		Widths:     parseWidths(widths),
+	}
+
+	// Process the existing image
+	result, err := s.imageMgr.ProcessExistingImage(fullSourcePath, opts)
+	if err != nil {
+		s.jsonError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to process image: %v", err))
+		return
+	}
+
+	// Return success response
+	s.jsonResponse(w, result, http.StatusOK)
+}
+
+// Helper functions
+func parseInt(s string) int {
+	if i, err := strconv.Atoi(s); err == nil {
+		return i
+	}
+	return 85
+}
+
+func parseWidths(s string) []int {
+	if s == "" {
+		return nil
+	}
+
+	var widths []int
+	for _, w := range strings.Split(s, ",") {
+		if i, err := strconv.Atoi(strings.TrimSpace(w)); err == nil && i > 0 {
+			widths = append(widths, i)
+		}
+	}
+	return widths
 }
 
 // handleHugoStatus returns Hugo server status
