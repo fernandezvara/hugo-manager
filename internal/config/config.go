@@ -62,11 +62,9 @@ type TemplateField struct {
 type TemplatesConfig map[string]map[string]TemplateField
 
 type ImagesConfig struct {
-	BaseDir        string        `yaml:"base_dir" json:"base_dir"`
 	DefaultQuality int           `yaml:"default_quality" json:"default_quality"`
 	Presets        []ImagePreset `yaml:"presets" json:"presets"`
 	OutputFormat   string        `yaml:"output_format" json:"output_format"`
-	Folders        []string      `yaml:"folders" json:"folders"`
 }
 
 type ImagePreset struct {
@@ -115,7 +113,6 @@ func Default() *Config {
 			AutoSaveDelay: 1000,
 		},
 		Images: ImagesConfig{
-			BaseDir:        "static/images",
 			DefaultQuality: 85,
 			Presets: []ImagePreset{
 				{Name: "Full responsive", Widths: []int{320, 640, 1024, 1920}},
@@ -126,12 +123,6 @@ func Default() *Config {
 				{Name: "Custom", Widths: []int{}},
 			},
 			OutputFormat: "jpg",
-			Folders: []string{
-				"personas",
-				"blog",
-				"general",
-				"institutions",
-			},
 		},
 		FileTree: FileTreeConfig{
 			ShowDirs: []string{

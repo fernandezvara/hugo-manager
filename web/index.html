@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hugo Manager</title>
     <link rel="stylesheet" href="/static/dist/css/app.css" />
+    <style>
+      .context-folder-display {
+        padding: 8px 12px;
+        background-color: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        font-family: monospace;
+        color: #374151;
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+      }
+    </style>
     <script>
       window.APP_CONFIG = {{CONFIG_JSON}};
     </script>
@@ -477,14 +490,24 @@
           </div>
 
           <div x-show="imageFile" class="upload-options">
-            <div class="form-group">
+            <!-- Folder selector - only show when not from context -->
+            <div class="form-group" x-show="!uploadFromContext">
               <label>Folder</label>
               <select x-model="uploadOptions.folder">
-                <template x-for="folder in imageFolders" :key="folder.name">
-                  <option :value="folder.name" x-text="folder.name"></option>
+                <template x-for="folder in imageFolders" :key="folder.path">
+                  <option :value="folder.path" x-text="folder.name"></option>
                 </template>
               </select>
             </div>
+
+            <!-- Context folder display - only show when from context -->
+            <div class="form-group" x-show="uploadFromContext">
+              <label>Upload to</label>
+              <div class="context-folder-display">
+                <span x-text="uploadOptions.folder || '...'"></span>
+              </div>
+            </div>
+
             <div class="form-group">
               <label>Filename</label>
               <input type="text" x-model="uploadOptions.filename" />
@@ -832,13 +855,28 @@
       @click.stop
       x-cloak
     >
-      <div class="context-menu-item" @click="contextMenuCreateFile()">
+      <div
+        class="context-menu-item"
+        @click="contextMenuCreateFile()"
+        x-show="contextMenu.isDirectory"
+      >
         📄 Create File
       </div>
-      <div class="context-menu-item" @click="contextMenuCreateDirectory()">
+      <div
+        class="context-menu-item"
+        @click="contextMenuCreateDirectory()"
+        x-show="contextMenu.isDirectory"
+      >
         📁 Create Directory
       </div>
-      <div class="context-menu-divider"></div>
+      <div
+        class="context-menu-item"
+        @click="contextMenuUploadImage()"
+        x-show="contextMenu.isDirectory"
+      >
+        🖼️ Upload Image
+      </div>
+      <div class="context-menu-divider" x-show="contextMenu.isDirectory"></div>
       <div class="context-menu-item" @click="contextMenuRename()">
         ✏️ Rename
       </div>

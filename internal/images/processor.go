@@ -66,37 +66,27 @@ func NewProcessor(projectDir string, cfg config.ImagesConfig) *Processor {
 	}
 }
 
-// GetFolders returns available image folders
+// GetFolders returns available image folders from common locations
 func (p *Processor) GetFolders() []FolderInfo {
 	var folders []FolderInfo
 
-	baseDir := filepath.Join(p.projectDir, p.config.BaseDir)
-
-	// Add configured folders
-	for _, folder := range p.config.Folders {
-		folders = append(folders, FolderInfo{
-			Name: folder,
-			Path: filepath.Join(p.config.BaseDir, folder),
-		})
+	// Common image directories to scan
+	commonDirs := []string{
+		"static/images",
+		"assets/images",
+		"static/img",
+		"assets/img",
 	}
 
-	// Also scan for existing folders
-	if entries, err := os.ReadDir(baseDir); err == nil {
-		for _, entry := range entries {
-			if entry.IsDir() {
-				name := entry.Name()
-				// Check if not already in list
-				found := false
-				for _, f := range folders {
-					if f.Name == name {
-						found = true
-						break
-					}
-				}
-				if !found {
+	for _, dir := range commonDirs {
+		fullPath := filepath.Join(p.projectDir, dir)
+		if entries, err := os.ReadDir(fullPath); err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() {
+					name := entry.Name()
 					folders = append(folders, FolderInfo{
 						Name: name,
-						Path: filepath.Join(p.config.BaseDir, name),
+						Path: filepath.Join(dir, name),
 					})
 				}
 			}
@@ -143,10 +133,12 @@ func (p *Processor) Process(reader io.Reader, opts UploadOptions) (*ProcessResul
 	}
 
 	// Create output directory
-	outputDir := filepath.Join(p.projectDir, p.config.BaseDir)
-	if opts.Folder != "" {
-		outputDir = filepath.Join(outputDir, opts.Folder)
+	if opts.Folder == "" {
+		return nil, fmt.Errorf("folder is required for image upload")
 	}
+
+	// Use folder directly (always a complete path)
+	outputDir := filepath.Join(p.projectDir, opts.Folder)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create output directory: %w", err)
 	}

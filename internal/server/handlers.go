@@ -272,14 +272,15 @@ func (s *Server) handleImageUpload(w http.ResponseWriter, r *http.Request) {
 	s.jsonResponse(w, result, http.StatusOK)
 }
 
-// handleImageFolders returns available image folders
 func (s *Server) handleImageFolders(w http.ResponseWriter, r *http.Request) {
-	s.jsonResponse(w, s.imageMgr.GetFolders(), http.StatusOK)
+	folders := s.imageMgr.GetFolders()
+	s.jsonResponse(w, folders, http.StatusOK)
 }
 
 // handleImagePresets returns available image presets
 func (s *Server) handleImagePresets(w http.ResponseWriter, r *http.Request) {
-	s.jsonResponse(w, s.imageMgr.GetPresets(), http.StatusOK)
+	presets := s.imageMgr.GetPresets()
+	s.jsonResponse(w, presets, http.StatusOK)
 }
 
 // handleHugoStatus returns Hugo server status
