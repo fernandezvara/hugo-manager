@@ -4,6 +4,19 @@
 # Web server settings
 server:
   port: 8080
+  timeout: 60                 # Request timeout in seconds
+  read_timeout: 30            # Read timeout in seconds
+  write_timeout: 30           # Write timeout in seconds
+  idle_timeout: 120           # Idle timeout in seconds
+  cors_origins: ["*"]         # CORS allowed origins
+  cors_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]  # CORS allowed methods
+  cors_headers: ["Content-Type", "Authorization"]            # CORS allowed headers
+  ws_origins: ["*"]            # WebSocket allowed origins
+  rate_limit: 0               # Requests per minute (0 = disabled)
+  max_request_size: 50        # Max request size in MB
+  enable_auth: false          # Enable authentication
+  auth_token: ""              # Simple auth token
+  shutdown_timeout: 30        # Graceful shutdown timeout in seconds
 
 # Hugo server settings
 hugo:
