@@ -347,6 +347,76 @@ func (s *Server) handleFileUpload(w http.ResponseWriter, r *http.Request) {
 	}, http.StatusOK)
 }
 
+// handleFileCopy copies an existing file
+func (s *Server) handleFileCopy(w http.ResponseWriter, r *http.Request) {
+	// Parse multipart form (max 50MB)
+	if err := r.ParseMultipartForm(50 << 20); err != nil {
+		s.jsonError(w, http.StatusBadRequest, "Failed to parse form data")
+		return
+	}
+
+	// Get source path from form
+	sourcePath := r.FormValue("sourcePath")
+	if sourcePath == "" {
+		s.jsonError(w, http.StatusBadRequest, "sourcePath is required")
+		return
+	}
+
+	// Get target filename from form
+	targetFilename := r.FormValue("targetFilename")
+	if targetFilename == "" {
+		s.jsonError(w, http.StatusBadRequest, "targetFilename is required")
+		return
+	}
+
+	// Get target folder (optional, defaults to source directory)
+	targetFolder := r.FormValue("folder")
+	if targetFolder == "" {
+		// Extract directory from source path
+		lastSlash := strings.LastIndex(sourcePath, "/")
+		if lastSlash > 0 {
+			targetFolder = sourcePath[:lastSlash]
+		}
+	}
+
+	// Create full paths
+	fullSourcePath := filepath.Join(s.projectDir, sourcePath)
+	fullTargetPath := filepath.Join(s.projectDir, targetFolder, targetFilename)
+
+	// Check if source file exists
+	if _, err := os.Stat(fullSourcePath); os.IsNotExist(err) {
+		s.jsonError(w, http.StatusBadRequest, "Source file not found")
+		return
+	}
+
+	// Copy file
+	source, err := os.Open(fullSourcePath)
+	if err != nil {
+		s.jsonError(w, http.StatusInternalServerError, "Failed to open source file")
+		return
+	}
+	defer source.Close()
+
+	destination, err := os.Create(fullTargetPath)
+	if err != nil {
+		s.jsonError(w, http.StatusInternalServerError, "Failed to create destination file")
+		return
+	}
+	defer destination.Close()
+
+	if _, err := io.Copy(destination, source); err != nil {
+		s.jsonError(w, http.StatusInternalServerError, "Failed to copy file")
+		return
+	}
+
+	// Return success response
+	s.jsonResponse(w, map[string]interface{}{
+		"message": "File copied successfully",
+		"source":  sourcePath,
+		"target":  filepath.Join(targetFolder, targetFilename),
+	}, http.StatusOK)
+}
+
 // handleImageProcess processes existing images
 func (s *Server) handleImageProcess(w http.ResponseWriter, r *http.Request) {
 	// Parse multipart form (max 50MB)

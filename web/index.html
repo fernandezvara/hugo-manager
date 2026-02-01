@@ -833,6 +833,44 @@
       </div>
     </div>
 
+    <!-- File Copy Modal -->
+    <div
+      class="modal"
+      x-show="showCopyModal"
+      @click.self="showCopyModal = false"
+      x-cloak
+    >
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Create Copy</h3>
+          <button @click="showCopyModal = false" class="btn btn-icon">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Source File</label>
+            <div class="context-folder-display">
+              <span x-text="copyOptions.sourcePath || '...'"></span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Copy Name</label>
+            <input type="text" x-model="copyOptions.targetFilename" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="showCopyModal = false" class="btn">Cancel</button>
+          <button
+            @click="copyFile()"
+            class="btn btn-primary"
+            :disabled="!copyOptions.targetFilename || copying"
+          >
+            <span x-show="!copying">Create Copy</span>
+            <span x-show="copying">Copying...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- New File Modal -->
     <div
       class="modal"
@@ -1108,6 +1146,13 @@
         📁 Upload File
       </div>
       <div class="context-menu-divider" x-show="contextMenu.isDirectory"></div>
+      <div
+        class="context-menu-item"
+        @click="contextMenuCreateCopy()"
+        x-show="!contextMenu.isDirectory"
+      >
+        📋 Create Copy
+      </div>
       <div
         class="context-menu-item"
         @click="contextMenuProcessImage()"

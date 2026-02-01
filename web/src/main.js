@@ -27,16 +27,6 @@ export function createApp() {
     // Configuration
     config: window.APP_CONFIG || {},
 
-    // Initialize method
-    init() {
-      this.loadConfig();
-      this.loadShortcodes();
-      this.loadImagePresets();
-      this.loadImageFolders();
-      this.loadFiles();
-      this.startStatusPolling();
-    },
-
     // UI State
     sidebarWidth: 280,
     editorWidth: null,
@@ -148,6 +138,16 @@ export function createApp() {
     processing: false,
     processFromContext: false,
 
+    // File Copy
+    showCopyModal: false,
+    copyOptions: {
+      sourcePath: "",
+      sourceName: "",
+      targetFilename: "",
+      folder: "",
+    },
+    copying: false,
+
     // New File
     newFilePath: "",
     newFileIsDir: false,
@@ -183,6 +183,10 @@ export function createApp() {
     },
 
     // File Operations
+    async loadFiles() {
+      return this.refreshFiles();
+    },
+
     async refreshFiles() {
       try {
         const res = await fetch("/api/files");
@@ -809,6 +813,30 @@ Content goes here...
       this.showProcessModal = true;
     },
 
+    contextMenuCreateCopy() {
+      this.hideContextMenu();
+      this.copyOptions.sourcePath = this.contextMenu.targetPath;
+      this.copyOptions.sourceName = this.contextMenu.target.name;
+      
+      // Add _copy before extension (test.md -> test_copy.md)
+      const name = this.contextMenu.target.name;
+      const lastDot = name.lastIndexOf('.');
+      if (lastDot > 0) {
+        // File has extension
+        this.copyOptions.targetFilename = name.substring(0, lastDot) + "_copy" + name.substring(lastDot);
+      } else {
+        // File has no extension
+        this.copyOptions.targetFilename = name + "_copy";
+      }
+      
+      // Extract directory for destination
+      const lastSlash = this.contextMenu.targetPath.lastIndexOf('/');
+      if (lastSlash > 0) {
+        this.copyOptions.folder = this.contextMenu.targetPath.substring(0, lastSlash);
+      }
+      this.showCopyModal = true;
+    },
+
     // Directory Selection
     openDirectoryModal(callback, currentDir = "") {
       this.directoryCallback = callback;
@@ -1324,6 +1352,38 @@ Content goes here...
         this.showToast("Failed to process image", "error");
       } finally {
         this.processing = false;
+      }
+    },
+
+    // File Copy Functions
+    async copyFile() {
+      if (!this.copyOptions.sourcePath || !this.copyOptions.targetFilename) return;
+
+      this.copying = true;
+
+      const formData = new FormData();
+      formData.append("sourcePath", this.copyOptions.sourcePath);
+      formData.append("targetFilename", this.copyOptions.targetFilename);
+      formData.append("folder", this.copyOptions.folder);
+
+      try {
+        const res = await fetch("/api/files/copy", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (data.error) {
+          this.showToast(data.error, "error");
+        } else {
+          this.showToast("File copied successfully", "success");
+          this.showCopyModal = false;
+          this.loadFiles(); // Refresh file tree
+        }
+      } catch (err) {
+        this.showToast("Failed to copy file", "error");
+      } finally {
+        this.copying = false;
       }
     },
 

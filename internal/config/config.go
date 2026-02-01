@@ -161,6 +161,13 @@ func Load(projectDir string) (*Config, error) {
 		return nil, err
 	}
 
+	if cfg.Templates == nil {
+		cfg.Templates = TemplatesConfig{}
+	}
+	if _, ok := cfg.Templates["Blank File"]; !ok {
+		cfg.Templates["Blank File"] = map[string]TemplateField{}
+	}
+
 	// Validate template configuration
 	if err := validateTemplates(cfg.Templates); err != nil {
 		return nil, fmt.Errorf("template configuration error: %w", err)
