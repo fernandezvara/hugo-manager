@@ -42,6 +42,7 @@ export function createApp() {
     editorWidth: null,
     showLogs: false,
     showImageModal: false,
+    showFileModal: false,
     showNewFile: false,
     showFileSelector: false,
     dragOver: false,
@@ -120,6 +121,17 @@ export function createApp() {
     },
     uploadResult: null,
     uploading: false,
+
+    // File Upload
+    fileUploadFile: null,
+    fileUploadOptions: {
+      folder: "",
+      filename: "",
+    },
+    fileUploadResult: null,
+    fileUploading: false,
+    fileUploadFromContext: false,
+    fileDragOver: false,
 
     // New File
     newFilePath: "",
@@ -749,6 +761,14 @@ Content goes here...
       this.showImageModal = true;
     },
 
+    contextMenuUploadFile() {
+      this.hideContextMenu();
+      // Use context directly - no API call needed
+      this.fileUploadOptions.folder = this.contextMenu.targetPath;
+      this.fileUploadFromContext = true;
+      this.showFileModal = true;
+    },
+
     // Directory Selection
     openDirectoryModal(callback, currentDir = "") {
       this.directoryCallback = callback;
@@ -1161,6 +1181,54 @@ Content goes here...
         this.showToast("Failed to upload image", "error");
       } finally {
         this.uploading = false;
+      }
+    },
+
+    // File Upload Functions
+    handleFileSelect(event, type) {
+      const file = event.target.files[0];
+      if (file) this.setFileFile(file);
+    },
+
+    handleFileDrop(event, type) {
+      this.fileDragOver = false;
+      const file = event.dataTransfer.files[0];
+      if (file) this.setFileFile(file);
+    },
+
+    setFileFile(file) {
+      this.fileUploadFile = file;
+      this.fileUploadOptions.filename = file.name;
+    },
+
+    async uploadFile() {
+      if (!this.fileUploadFile) return;
+
+      this.fileUploading = true;
+      this.fileUploadResult = null;
+
+      const formData = new FormData();
+      formData.append("file", this.fileUploadFile);
+      formData.append("folder", this.fileUploadOptions.folder);
+      formData.append("filename", this.fileUploadOptions.filename);
+
+      try {
+        const res = await fetch("/api/files/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (data.error) {
+          this.showToast(data.error, "error");
+        } else {
+          this.fileUploadResult = data;
+          this.showToast("File uploaded successfully", "success");
+        }
+      } catch (err) {
+        this.showToast("Failed to upload file", "error");
+      } finally {
+        this.fileUploading = false;
       }
     },
 

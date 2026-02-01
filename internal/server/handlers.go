@@ -2,7 +2,9 @@ package server
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -281,6 +283,67 @@ func (s *Server) handleImageFolders(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleImagePresets(w http.ResponseWriter, r *http.Request) {
 	presets := s.imageMgr.GetPresets()
 	s.jsonResponse(w, presets, http.StatusOK)
+}
+
+// handleFileUpload handles generic file uploads
+func (s *Server) handleFileUpload(w http.ResponseWriter, r *http.Request) {
+	// Parse multipart form (max 50MB)
+	if err := r.ParseMultipartForm(50 << 20); err != nil {
+		s.jsonError(w, http.StatusBadRequest, "Failed to parse form data")
+		return
+	}
+
+	// Get file from form
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		s.jsonError(w, http.StatusBadRequest, "No file provided")
+		return
+	}
+	defer file.Close()
+
+	// Get folder from form (required)
+	folder := r.FormValue("folder")
+	if folder == "" {
+		s.jsonError(w, http.StatusBadRequest, "folder is required for file upload")
+		return
+	}
+
+	// Get filename from form or use original filename
+	filename := r.FormValue("filename")
+	if filename == "" {
+		filename = header.Filename
+	}
+
+	// Create full file path
+	targetPath := filepath.Join(s.projectDir, folder, filename)
+
+	// Create directory if it doesn't exist
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		s.jsonError(w, http.StatusInternalServerError, "Failed to create directory")
+		return
+	}
+
+	// Create destination file
+	dst, err := os.Create(targetPath)
+	if err != nil {
+		s.jsonError(w, http.StatusInternalServerError, "Failed to create file")
+		return
+	}
+	defer dst.Close()
+
+	// Copy file content
+	if _, err := io.Copy(dst, file); err != nil {
+		s.jsonError(w, http.StatusInternalServerError, "Failed to save file")
+		return
+	}
+
+	// Return success response
+	s.jsonResponse(w, map[string]interface{}{
+		"message":  "File uploaded successfully",
+		"filename": filename,
+		"path":     filepath.Join(folder, filename),
+		"size":     header.Size,
+	}, http.StatusOK)
 }
 
 // handleHugoStatus returns Hugo server status

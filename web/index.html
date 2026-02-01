@@ -609,6 +609,98 @@
       </div>
     </div>
 
+    <!-- File Upload Modal -->
+    <div
+      class="modal"
+      x-show="showFileModal"
+      @click.self="showFileModal = false"
+      x-cloak
+    >
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Upload File</h3>
+          <button @click="showFileModal = false" class="btn btn-icon">×</button>
+        </div>
+        <div class="modal-body">
+          <div
+            class="upload-area"
+            :class="{ 'drag-over': fileDragOver }"
+            @dragover.prevent="fileDragOver = true"
+            @dragleave.prevent="fileDragOver = false"
+            @drop.prevent="handleFileDrop($event, 'file')"
+          >
+            <label for="file-upload-input" class="upload-label">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17,8 12,3 7,8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>Drop file here or click to select</span>
+            </label>
+            <input
+              type="file"
+              id="file-upload-input"
+              @change="handleFileSelect($event, 'file')"
+              style="display: none"
+            />
+          </div>
+
+          <div x-show="fileUploadFile" class="upload-options">
+            <!-- Context folder display - only show when from context -->
+            <div class="form-group" x-show="fileUploadFromContext">
+              <label>Upload to</label>
+              <div class="context-folder-display">
+                <span x-text="fileUploadOptions.folder || '...'"></span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Filename</label>
+              <input type="text" x-model="fileUploadOptions.filename" />
+            </div>
+          </div>
+
+          <div x-show="fileUploadResult" class="upload-result">
+            <h4>✅ File Uploaded Successfully!</h4>
+            <div class="form-group">
+              <label>Path</label>
+              <div class="code-block">
+                <code x-text="fileUploadResult?.path"></code>
+                <button
+                  @click="copyToClipboard(fileUploadResult?.path)"
+                  class="btn btn-sm"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Size</label>
+              <div class="code-block">
+                <code x-text="fileUploadResult?.size + ' bytes'"></code>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="showFileModal = false" class="btn">Cancel</button>
+          <button
+            @click="uploadFile()"
+            class="btn btn-primary"
+            :disabled="!fileUploadFile || fileUploading"
+          >
+            <span x-show="!fileUploading">Upload File</span>
+            <span x-show="fileUploading">Uploading...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- New File Modal -->
     <div
       class="modal"
@@ -875,6 +967,13 @@
         x-show="contextMenu.isDirectory"
       >
         🖼️ Upload Image
+      </div>
+      <div
+        class="context-menu-item"
+        @click="contextMenuUploadFile()"
+        x-show="contextMenu.isDirectory"
+      >
+        📁 Upload File
       </div>
       <div class="context-menu-divider" x-show="contextMenu.isDirectory"></div>
       <div class="context-menu-item" @click="contextMenuRename()">

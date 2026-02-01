@@ -134,6 +134,7 @@ func (s *Server) setupRoutes(r chi.Router) {
 			r.Put("/{path}", s.handleFilePut)
 			r.Post("/{path}", s.handleFilePost)
 			r.Delete("/{path}", s.handleFileDelete)
+			r.Post("/upload", s.handleFileUpload)
 		})
 
 		// Shortcode routes
