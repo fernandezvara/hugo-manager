@@ -39,16 +39,8 @@ editor:
 
 # Image processing settings
 images:
-  base_dir: static/images  # Base directory for images
   default_quality: 85      # JPEG quality (1-100)
   output_format: jpg       # jpg, png, webp
-  
-  # Folders to show in upload dialog
-  folders:
-    - personas
-    - blog
-    - general
-    - instituciones
   
   # Size presets for responsive images
   presets:
