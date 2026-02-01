@@ -7,10 +7,35 @@ import { lineNumbers } from '@codemirror/view';
 import { keymap } from '@codemirror/view';
 import { defaultKeymap } from '@codemirror/commands';
 
+// Utility functions
+function slugify(text) {
+  return text
+    .toString()
+    .normalize('NFD')                           // Normalize to decomposed form
+    .replace(/[\u0300-\u036f]/g, '')           // Remove diacritics (á → a, ñ → n)
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')                      // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')                 // Remove all non-word chars except -
+    .replace(/\-\-+/g, '-')                   // Replace multiple - with single -
+    .replace(/^-+/, '')                        // Trim - from start
+    .replace(/-+$/, '');                       // Trim - from end
+}
+
 export function createApp() {
   return {
     // Configuration
     config: window.APP_CONFIG || {},
+    
+    // Initialize method
+    init() {
+      this.loadConfig();
+      this.loadShortcodes();
+      this.loadImagePresets();
+      this.loadImageFolders();
+      this.loadFiles();
+      this.startStatusPolling();
+    },
     
     // UI State
     sidebarWidth: 280,
@@ -35,12 +60,48 @@ export function createApp() {
     // Shortcodes
     shortcodes: [],
     
+    // Templates
+    showTemplateModal: false,
+    selectedTemplate: null,
+    templateForm: {},
+    templateFilename: '',
+    templateDirectory: '',
+    
+    // Context Menu
+    contextMenu: {
+      visible: false,
+      x: 0,
+      y: 0,
+      target: null,
+      targetPath: '',
+      isDirectory: false
+    },
+    
+    // Directory Selection
+    showDirectoryModal: false,
+    directoryCallback: null,
+    selectedDirectory: '',
+    newDirectoryName: '',
+    
+    // Rename Modal
+    showRenameModal: false,
+    renameCallback: null,
+    renameItemName: '',
+    renameNewName: '',
+    
+    // Confirmation Modal
+    showConfirmModal: false,
+    confirmCallback: null,
+    confirmMessage: '',
+    confirmTitle: '',
+    
     // Hugo Status
     hugoStatus: { status: 'stopped', message: '' },
     logs: [],
     ws: null,
     previewReady: false,
     previewUrl: 'about:blank',
+    statusInterval: null,
     
     // Image Upload
     imageFile: null,
@@ -85,7 +146,10 @@ export function createApp() {
       this.connectWebSocket();
       
       // Periodic status check
-      setInterval(() => this.loadHugoStatus(), 5000);
+      if (this.statusInterval) {
+        clearInterval(this.statusInterval);
+      }
+      this.statusInterval = setInterval(() => this.loadHugoStatus(), 5000);
     },
 
     // File Operations
@@ -492,6 +556,319 @@ Content goes here...
       this.editor.focus();
     },
 
+    // Template Operations
+    openTemplateModal() {
+      this.showTemplateModal = true;
+      this.selectedTemplate = null;
+      this.templateForm = {};
+      this.templateFilename = '';
+    },
+
+    closeTemplateModal() {
+      this.showTemplateModal = false;
+      this.selectedTemplate = null;
+      this.templateForm = {};
+      this.templateFilename = '';
+    },
+
+    selectTemplate(templateName) {
+      this.selectedTemplate = templateName;
+      this.templateForm = {};
+      // Make the app available to Alpine.js
+      window.app = this;
+      window.init = function() {
+        // Initialize app - this will be called by Alpine.js
+      };
+      // Initialize form with defaults
+      const template = this.config.templates[templateName];
+      if (template) {
+        for (const [fieldName, field] of Object.entries(template)) {
+          if (field.type === 'date' && !field.default) {
+            // Default to today's date if no default specified
+            this.templateForm[fieldName] = new Date().toISOString().split('T')[0];
+          } else {
+            this.templateForm[fieldName] = field.default || '';
+          }
+        }
+      }
+    },
+
+    updateFilename() {
+      if (this.templateForm.title) {
+        this.templateFilename = slugify(this.templateForm.title) + '.md';
+      }
+    },
+
+    async createFromTemplate() {
+      if (!this.selectedTemplate || !this.templateFilename) {
+        this.showToast('Please select a template and enter a filename', 'error');
+        return;
+      }
+
+      // Build full path with directory
+      const fullPath = this.templateDirectory ? 
+        `${this.templateDirectory}/${this.templateFilename}` : 
+        this.templateFilename;
+
+      try {
+        const response = await fetch(`/api/files/${encodeURIComponent(fullPath)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            template: this.selectedTemplate,
+            data: this.templateForm,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          if (response.status === 409) {
+            this.showToast('File already exists. Please choose a different filename.', 'error');
+            return;
+          }
+          throw new Error(error);
+        }
+
+        this.showToast('File created successfully', 'success');
+        this.closeTemplateModal();
+        await this.refreshFiles();
+        
+        // Open the created file
+        await this.openFile(fullPath);
+        
+      } catch (error) {
+        console.error('Error creating file from template:', error);
+        this.showToast('Failed to create file: ' + error.message, 'error');
+      }
+    },
+
+    // Context Menu Operations
+    showContextMenu(event, item, isDirectory = false) {
+      event.preventDefault();
+      this.contextMenu.visible = true;
+      this.contextMenu.x = event.clientX;
+      this.contextMenu.y = event.clientY;
+      this.contextMenu.target = item;
+      this.contextMenu.targetPath = item.path;
+      this.contextMenu.isDirectory = isDirectory;
+      
+      // Hide context menu when clicking elsewhere
+      document.addEventListener('click', this.hideContextMenu);
+    },
+
+    hideContextMenu() {
+      this.contextMenu.visible = false;
+      document.removeEventListener('click', this.hideContextMenu);
+    },
+
+    contextMenuCreateFile() {
+      this.hideContextMenu();
+      this.templateDirectory = this.contextMenu.targetPath;
+      this.openTemplateModal();
+    },
+
+    contextMenuCreateDirectory() {
+      this.hideContextMenu();
+      this.directoryCallback = (dirName) => this.createDirectory(dirName);
+      this.selectedDirectory = this.contextMenu.targetPath;
+      this.showDirectoryModal = true;
+    },
+
+    contextMenuRename() {
+      this.hideContextMenu();
+      this.renameItemName = this.contextMenu.target.name;
+      this.renameNewName = this.contextMenu.target.name;
+      this.renameCallback = (newName) => this.renameItem(this.contextMenu.targetPath, newName);
+      this.showRenameModal = true;
+    },
+
+    contextMenuDelete() {
+      this.hideContextMenu();
+      const itemType = this.contextMenu.isDirectory ? 'directory' : 'file';
+      this.showConfirmation(
+        `Delete ${itemType}`,
+        `Are you sure you want to delete "${this.contextMenu.target.name}"?`,
+        () => this.deleteItem(this.contextMenu.targetPath)
+      );
+    },
+
+    // Directory Selection
+    openDirectoryModal(callback, currentDir = '') {
+      this.directoryCallback = callback;
+      this.selectedDirectory = currentDir;
+      this.newDirectoryName = '';
+      this.showDirectoryModal = true;
+    },
+
+    closeDirectoryModal() {
+      this.showDirectoryModal = false;
+      this.directoryCallback = null;
+      this.selectedDirectory = '';
+      this.newDirectoryName = '';
+    },
+
+    selectDirectory(dir) {
+      this.selectedDirectory = dir;
+    },
+
+    confirmDirectorySelection() {
+      if (this.newDirectoryName.trim()) {
+        const fullPath = this.selectedDirectory ? 
+          `${this.selectedDirectory}/${this.newDirectoryName.trim()}` : 
+          this.newDirectoryName.trim();
+        if (this.directoryCallback) {
+          this.directoryCallback(fullPath);
+        }
+        this.closeDirectoryModal();
+      }
+    },
+
+    async createDirectory(dirPath) {
+      try {
+        const response = await fetch(`/api/files/${encodeURIComponent(dirPath)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            isDir: true,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          if (response.status === 409) {
+            this.showToast('Directory already exists', 'error');
+          } else if (response.status === 400) {
+            this.showToast('Invalid directory path', 'error');
+          } else {
+            this.showToast('Failed to create directory: ' + errorText, 'error');
+          }
+          return;
+        }
+
+        this.showToast('Directory created successfully', 'success');
+        await this.refreshFiles();
+      } catch (error) {
+        console.error('Error creating directory:', error);
+        this.showToast('Failed to create directory', 'error');
+      }
+    },
+
+    // Rename Modal
+    openRenameModal(itemName, currentName, callback) {
+      this.renameItemName = itemName;
+      this.renameNewName = currentName;
+      this.renameCallback = callback;
+      this.showRenameModal = true;
+    },
+
+    closeRenameModal() {
+      this.showRenameModal = false;
+      this.renameCallback = null;
+      this.renameItemName = '';
+      this.renameNewName = '';
+    },
+
+    confirmRename() {
+      if (this.renameNewName.trim() && this.renameNewName !== this.renameItemName) {
+        if (this.renameCallback) {
+          this.renameCallback(this.renameNewName.trim());
+        }
+        this.closeRenameModal();
+      }
+    },
+
+    // Confirmation Modal
+    showConfirmation(title, message, callback) {
+      this.confirmTitle = title;
+      this.confirmMessage = message;
+      this.confirmCallback = callback;
+      this.showConfirmModal = true;
+    },
+
+    closeConfirmModal() {
+      this.showConfirmModal = false;
+      this.confirmCallback = null;
+      this.confirmMessage = '';
+      this.confirmTitle = '';
+    },
+
+    confirmAction() {
+      if (this.confirmCallback) {
+        this.confirmCallback();
+      }
+      this.closeConfirmModal();
+    },
+
+    // File Operations
+    async renameItem(oldPath, newName) {
+      try {
+        const response = await fetch(`/api/files/${encodeURIComponent(oldPath)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ newName }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          if (response.status === 409) {
+            this.showToast('Destination already exists', 'error');
+          } else if (response.status === 404) {
+            this.showToast('Source does not exist', 'error');
+          } else if (response.status === 400) {
+            this.showToast('Invalid path or name', 'error');
+          } else {
+            this.showToast('Failed to rename: ' + errorText, 'error');
+          }
+          return;
+        }
+
+        this.showToast('Renamed successfully', 'success');
+        await this.refreshFiles();
+      } catch (error) {
+        console.error('Error renaming item:', error);
+        this.showToast('Failed to rename', 'error');
+      }
+    },
+
+    async deleteItem(path) {
+      try {
+        const response = await fetch(`/api/files/${encodeURIComponent(path)}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          if (response.status === 404) {
+            this.showToast('File or directory does not exist', 'error');
+          } else if (response.status === 409) {
+            this.showToast('Directory not empty', 'error');
+          } else if (response.status === 400) {
+            this.showToast('Invalid path', 'error');
+          } else {
+            this.showToast('Failed to delete: ' + errorText, 'error');
+          }
+          return;
+        }
+
+        this.showToast('Deleted successfully', 'success');
+        await this.refreshFiles();
+        
+        // Close tab if deleted file was open
+        if (this.tabs.find(tab => tab.path === path)) {
+          this.closeTab(path);
+        }
+      } catch (error) {
+        console.error('Error deleting item:', error);
+        this.showToast('Failed to delete', 'error');
+      }
+    },
+
     // Hugo Control
     async loadHugoStatus() {
       try {
@@ -795,7 +1172,7 @@ Content goes here...
       
       if (item.isDir) {
         html += `
-          <div class="tree-item-content" @click="toggleDir('${item.path}')">
+          <div class="tree-item-content" @click="toggleDir('${item.path}')" @contextmenu="showContextMenu($event, ${JSON.stringify(item).replace(/"/g, '&quot;')}, true)">
             <span class="tree-toggle ${isExpanded ? 'expanded' : ''}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
                 <polyline points="9 18 15 12 9 6"/>
@@ -820,7 +1197,7 @@ Content goes here...
       } else {
         const iconClass = `file-${item.type || 'text'}`;
         html += `
-          <div class="tree-item-content ${isActive ? 'active' : ''}" @click="openFile('${item.path}', '${item.type}')">
+          <div class="tree-item-content ${isActive ? 'active' : ''}" @click="openFile('${item.path}', '${item.type}')" @contextmenu="showContextMenu($event, ${JSON.stringify(item).replace(/"/g, '&quot;')}, false)">
             <span class="tree-toggle" style="visibility: hidden">
               <svg viewBox="0 0 24 24" width="12" height="12"></svg>
             </span>

@@ -9,7 +9,7 @@
       window.APP_CONFIG = {{CONFIG_JSON}};
     </script>
   </head>
-  <body x-data="app()" x-init="init()" @keydown.window="handleKeydown($event)">
+  <body x-data="app" x-init="init()" @keydown.window="handleKeydown($event)">
     <!-- Header -->
     <header class="header">
       <div class="header-left">
@@ -130,9 +130,9 @@
               </svg>
             </button>
             <button
-              @click="showNewFileDialog()"
+              @click="openTemplateModal()"
               class="btn btn-icon"
-              title="New File"
+              title="New File from Template"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -669,6 +669,290 @@
           <span x-text="toast.message"></span>
         </div>
       </template>
+    </div>
+
+    <!-- Template Modal -->
+    <div
+      class="modal"
+      x-show="showTemplateModal"
+      @click.self="closeTemplateModal()"
+      x-cloak
+    >
+      <div class="modal-content modal-lg">
+        <div class="modal-header">
+          <h3>Create from Template</h3>
+          <button @click="closeTemplateModal()" class="btn btn-icon">×</button>
+        </div>
+        <div class="modal-body">
+          <!-- Template Selection -->
+          <div class="form-group">
+            <label>Select Template:</label>
+            <select
+              @change="selectTemplate($event.target.value)"
+              class="form-control"
+              :disabled="!config.templates || Object.keys(config.templates).length === 0"
+            >
+              <option value="">Choose a template...</option>
+              <template
+                x-for="(template, name) in config.templates"
+                :key="name"
+              >
+                <option :value="name" x-text="name"></option>
+              </template>
+            </select>
+          </div>
+
+          <!-- Dynamic Form Fields -->
+          <template
+            x-if="selectedTemplate && config.templates[selectedTemplate]"
+          >
+            <div class="template-form">
+              <template
+                x-for="(field, fieldName) in config.templates[selectedTemplate]"
+                :key="fieldName"
+              >
+                <div class="form-group">
+                  <!-- Text Input -->
+                  <template x-if="field.type === 'text'">
+                    <div>
+                      <label
+                        x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1) + ':'"
+                      ></label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        x-model="templateForm[fieldName]"
+                        @input="updateFilename()"
+                      />
+                    </div>
+                  </template>
+
+                  <!-- Textarea -->
+                  <template x-if="field.type === 'textarea'">
+                    <div>
+                      <label
+                        x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1) + ':'"
+                      ></label>
+                      <textarea
+                        class="form-control"
+                        rows="4"
+                        x-model="templateForm[fieldName]"
+                      ></textarea>
+                    </div>
+                  </template>
+
+                  <!-- Number Input -->
+                  <template x-if="field.type === 'number'">
+                    <div>
+                      <label
+                        x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1) + ':'"
+                      ></label>
+                      <input
+                        type="number"
+                        class="form-control"
+                        x-model="templateForm[fieldName]"
+                      />
+                    </div>
+                  </template>
+
+                  <!-- Boolean Checkbox -->
+                  <template x-if="field.type === 'bool'">
+                    <div class="checkbox-group">
+                      <label class="checkbox-label">
+                        <input
+                          type="checkbox"
+                          :checked="templateForm[fieldName] === true || templateForm[fieldName] === 'true'"
+                          @change="templateForm[fieldName] = $event.target.checked"
+                        />
+                        <span
+                          x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1)"
+                        ></span>
+                      </label>
+                    </div>
+                  </template>
+
+                  <!-- Date Input -->
+                  <template x-if="field.type === 'date'">
+                    <div>
+                      <label
+                        x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1) + ':'"
+                      ></label>
+                      <input
+                        type="date"
+                        class="form-control"
+                        x-model="templateForm[fieldName]"
+                      />
+                    </div>
+                  </template>
+                </div>
+              </template>
+
+              <!-- Filename Field (always last) -->
+              <div class="form-group">
+                <label>Filename:</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  x-model="templateFilename"
+                  placeholder="filename.md"
+                />
+              </div>
+            </div>
+          </template>
+        </div>
+        <div class="modal-footer">
+          <div class="modal-footer-info" x-show="templateFilename">
+            <small class="text-muted">
+              File path:
+              <code
+                x-text="templateDirectory ? templateDirectory + '/' + templateFilename : templateFilename"
+              ></code>
+            </small>
+          </div>
+          <div class="modal-footer-actions">
+            <button @click="closeTemplateModal()" class="btn">Cancel</button>
+            <button
+              @click="createFromTemplate()"
+              class="btn btn-primary"
+              :disabled="!selectedTemplate || !templateFilename"
+            >
+              Create File
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div
+      class="context-menu"
+      x-show="contextMenu.visible"
+      x-transition
+      :style="`position: fixed; left: ${contextMenu.x}px; top: ${contextMenu.y}px; z-index: 1000;`"
+      @click.stop
+      x-cloak
+    >
+      <div class="context-menu-item" @click="contextMenuCreateFile()">
+        📄 Create File
+      </div>
+      <div class="context-menu-item" @click="contextMenuCreateDirectory()">
+        📁 Create Directory
+      </div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item" @click="contextMenuRename()">
+        ✏️ Rename
+      </div>
+      <div class="context-menu-item danger" @click="contextMenuDelete()">
+        🗑️ Delete
+      </div>
+    </div>
+
+    <!-- Directory Selection Modal -->
+    <div
+      class="modal"
+      x-show="showDirectoryModal"
+      @click.self="closeDirectoryModal()"
+      x-cloak
+    >
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Select Directory</h3>
+          <button @click="closeDirectoryModal()" class="btn btn-icon">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>New Directory Name:</label>
+            <input
+              type="text"
+              class="form-control"
+              x-model="newDirectoryName"
+              placeholder="directory-name"
+              @keyup.enter="confirmDirectorySelection()"
+            />
+          </div>
+          <div class="form-group" x-show="selectedDirectory">
+            <label>Parent Directory:</label>
+            <div class="directory-path">
+              <span x-text="selectedDirectory || 'Root'"></span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="closeDirectoryModal()" class="btn">Cancel</button>
+          <button
+            @click="confirmDirectorySelection()"
+            class="btn btn-primary"
+            :disabled="!newDirectoryName.trim()"
+          >
+            Create
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rename Modal -->
+    <div
+      class="modal"
+      x-show="showRenameModal"
+      @click.self="closeRenameModal()"
+      x-cloak
+    >
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Rename</h3>
+          <button @click="closeRenameModal()" class="btn btn-icon">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Item Name:</label>
+            <div class="current-name" x-text="renameItemName"></div>
+          </div>
+          <div class="form-group">
+            <label>New Name:</label>
+            <input
+              type="text"
+              class="form-control"
+              x-model="renameNewName"
+              placeholder="Enter new name"
+              @keyup.enter="confirmRename()"
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="closeRenameModal()" class="btn">Cancel</button>
+          <button
+            @click="confirmRename()"
+            class="btn btn-primary"
+            :disabled="!renameNewName.trim() || renameNewName === renameItemName"
+          >
+            Rename
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div
+      class="modal"
+      x-show="showConfirmModal"
+      @click.self="closeConfirmModal()"
+      x-cloak
+    >
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 x-text="confirmTitle"></h3>
+          <button @click="closeConfirmModal()" class="btn btn-icon">×</button>
+        </div>
+        <div class="modal-body">
+          <p x-text="confirmMessage"></p>
+        </div>
+        <div class="modal-footer">
+          <button @click="closeConfirmModal()" class="btn">Cancel</button>
+          <button @click="confirmAction()" class="btn btn-danger">
+            Confirm
+          </button>
+        </div>
+      </div>
     </div>
 
     <script type="module" src="/static/dist/js/app.js"></script>

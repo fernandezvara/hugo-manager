@@ -10,4 +10,8 @@ import { createApp } from './main.js';
 // Initialize Alpine with the app
 window.Alpine = Alpine;
 Alpine.data('app', createApp);
-Alpine.start();
+
+// Wait for DOM to be ready before starting Alpine
+document.addEventListener('DOMContentLoaded', () => {
+  Alpine.start();
+});
