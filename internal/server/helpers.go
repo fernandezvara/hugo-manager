@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -150,5 +151,14 @@ func (s *Server) validateFilename(filename string) error {
 
 // getURLParam safely extracts URL parameters from chi context
 func (s *Server) getURLParam(r *http.Request, param string) string {
-	return chi.URLParam(r, param)
+	value := chi.URLParam(r, param)
+	if value == "" {
+		return ""
+	}
+	// Decode URL-encoded parameters
+	decoded, err := url.PathUnescape(value)
+	if err != nil {
+		return value // Return original if decoding fails
+	}
+	return decoded
 }
