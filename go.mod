@@ -3,6 +3,7 @@ module github.com/fernandezvara/hugo-manager
 go 1.25.5
 
 require (
+	github.com/go-chi/chi/v5 v5.2.4
 	github.com/gorilla/websocket v1.5.1
 	gopkg.in/yaml.v3 v3.0.1
 )

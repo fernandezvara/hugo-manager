@@ -21,7 +21,20 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port int `yaml:"port" json:"port"`
+	Port            int      `yaml:"port" json:"port"`
+	Timeout         int      `yaml:"timeout" json:"timeout"`                   // Request timeout in seconds
+	ReadTimeout     int      `yaml:"read_timeout" json:"read_timeout"`         // Read timeout in seconds
+	WriteTimeout    int      `yaml:"write_timeout" json:"write_timeout"`       // Write timeout in seconds
+	IdleTimeout     int      `yaml:"idle_timeout" json:"idle_timeout"`         // Idle timeout in seconds
+	CORSOrigins     []string `yaml:"cors_origins" json:"cors_origins"`         // CORS allowed origins
+	CORSMethods     []string `yaml:"cors_methods" json:"cors_methods"`         // CORS allowed methods
+	CORSHeaders     []string `yaml:"cors_headers" json:"cors_headers"`         // CORS allowed headers
+	WSOrigins       []string `yaml:"ws_origins" json:"ws_origins"`             // WebSocket allowed origins
+	RateLimit       int      `yaml:"rate_limit" json:"rate_limit"`             // Requests per minute (0 = disabled)
+	MaxRequestSize  int      `yaml:"max_request_size" json:"max_request_size"` // Max request size in MB
+	EnableAuth      bool     `yaml:"enable_auth" json:"enable_auth"`           // Enable authentication
+	AuthToken       string   `yaml:"auth_token" json:"auth_token"`             // Simple auth token
+	ShutdownTimeout int      `yaml:"shutdown_timeout" json:"shutdown_timeout"` // Graceful shutdown timeout in seconds
 }
 
 type HugoConfig struct {
@@ -71,7 +84,20 @@ type FileTreeConfig struct {
 func Default() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port: 8080,
+			Port:            8080,
+			Timeout:         60,
+			ReadTimeout:     30,
+			WriteTimeout:    30,
+			IdleTimeout:     120,
+			CORSOrigins:     []string{"*"},
+			CORSMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			CORSHeaders:     []string{"Content-Type", "Authorization"},
+			WSOrigins:       []string{"*"},
+			RateLimit:       0,  // Disabled by default
+			MaxRequestSize:  50, // 50MB
+			EnableAuth:      false,
+			AuthToken:       "",
+			ShutdownTimeout: 30,
 		},
 		Hugo: HugoConfig{
 			Port:              1313,
