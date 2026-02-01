@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -48,13 +49,106 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 
 // handleFiles returns the file tree
 func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {
-	tree, err := s.fileMgr.GetTree()
+	show := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("show")))
+	if show == "" {
+		show = "all"
+	}
+	q := r.URL.Query().Get("q")
+	folder := r.URL.Query().Get("folder")
+
+	var tree interface{}
+	var err error
+
+	switch show {
+	case "images":
+		var roots []string
+		if folder != "" {
+			roots = []string{folder}
+		} else {
+			for _, f := range s.imageMgr.GetFolders() {
+				roots = append(roots, f.Path)
+			}
+		}
+		allowedTypes := map[string]bool{"image": true}
+		tree, err = s.fileMgr.GetFilteredTree(roots, q, allowedTypes, true)
+	case "markdown":
+		roots := []string{folder}
+		if folder == "" {
+			roots = s.config.FileTree.ShowDirs
+		}
+		allowedTypes := map[string]bool{"markdown": true}
+		tree, err = s.fileMgr.GetFilteredTree(roots, q, allowedTypes, true)
+	case "all":
+		if folder != "" {
+			tree, err = s.fileMgr.GetTreeForRoots([]string{folder})
+		} else {
+			tree, err = s.fileMgr.GetTree()
+		}
+	default:
+		s.jsonError(w, http.StatusBadRequest, "Invalid show parameter")
+		return
+	}
+
 	if err != nil {
 		s.jsonError(w, http.StatusInternalServerError, "Failed to get file tree")
 		return
 	}
 
 	s.jsonResponse(w, tree, http.StatusOK)
+}
+
+func (s *Server) handleFileSearch(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	folder := r.URL.Query().Get("folder")
+
+	var folders []string
+	if folder != "" {
+		folders = []string{folder}
+	} else {
+		for _, f := range s.imageMgr.GetFolders() {
+			folders = append(folders, f.Path)
+		}
+	}
+
+	results, err := s.fileMgr.SearchImages(folders, query)
+	if err != nil {
+		s.jsonError(w, http.StatusInternalServerError, "Failed to search files")
+		return
+	}
+
+	s.jsonResponse(w, results, http.StatusOK)
+}
+
+func (s *Server) handleFileRaw(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		s.jsonError(w, http.StatusBadRequest, "path is required")
+		return
+	}
+
+	if !s.fileMgr.IsValidPath(path) {
+		s.jsonError(w, http.StatusBadRequest, "invalid path")
+		return
+	}
+
+	data, err := s.fileMgr.ReadFileBytes(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			s.jsonError(w, http.StatusNotFound, "File not found")
+			return
+		}
+		s.jsonError(w, http.StatusInternalServerError, "Failed to read file")
+		return
+	}
+
+	contentType := mime.TypeByExtension(strings.ToLower(filepath.Ext(path)))
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	w.Header().Set("Content-Type", contentType)
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
 }
 
 // handleFileGet handles GET requests for file content

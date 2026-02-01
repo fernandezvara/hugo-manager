@@ -156,6 +156,10 @@ func (s *Server) contentTypeMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Only apply to API routes
 		if len(r.URL.Path) >= 4 && r.URL.Path[:4] == "/api" {
+			if strings.HasPrefix(r.URL.Path, "/api/files/raw") {
+				next.ServeHTTP(w, r)
+				return
+			}
 			w.Header().Set("Content-Type", "application/json")
 		}
 		next.ServeHTTP(w, r)

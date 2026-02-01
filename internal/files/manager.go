@@ -3,6 +3,7 @@ package files
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -38,70 +39,97 @@ func NewManager(projectDir string, cfg config.FileTreeConfig) *Manager {
 
 // GetTree returns the file tree for configured directories
 func (m *Manager) GetTree() ([]FileInfo, error) {
-	var tree []FileInfo
+	return m.GetTreeForRoots(m.config.ShowDirs)
+}
 
-	for _, dir := range m.config.ShowDirs {
+func (m *Manager) GetTreeForRoots(roots []string) ([]FileInfo, error) {
+	return m.GetFilteredTree(roots, "", nil, false)
+}
+
+func (m *Manager) GetFilteredTree(roots []string, query string, allowedTypes map[string]bool, pruneEmptyDirs bool) ([]FileInfo, error) {
+	var tree []FileInfo
+	q := strings.ToLower(strings.TrimSpace(query))
+
+	for _, dir := range roots {
+		if dir == "" {
+			continue
+		}
 		fullPath := filepath.Join(m.projectDir, dir)
 		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 			continue
 		}
 
-		info, err := m.buildTree(fullPath, dir, 0)
-		if err != nil {
+		info, ok := m.buildFilteredTree(fullPath, dir, q, allowedTypes, pruneEmptyDirs)
+		if !ok {
 			continue
 		}
 		tree = append(tree, info)
 	}
 
+	// Sort roots alphabetically
+	sort.Slice(tree, func(i, j int) bool {
+		if tree[i].IsDir != tree[j].IsDir {
+			return tree[i].IsDir
+		}
+		return strings.ToLower(tree[i].Name) < strings.ToLower(tree[j].Name)
+	})
+
 	return tree, nil
 }
 
-// buildTree recursively builds the file tree
-func (m *Manager) buildTree(fullPath, relativePath string, depth int) (FileInfo, error) {
+func (m *Manager) buildFilteredTree(fullPath, relativePath, query string, allowedTypes map[string]bool, pruneEmptyDirs bool) (FileInfo, bool) {
 	stat, err := os.Stat(fullPath)
 	if err != nil {
-		return FileInfo{}, err
+		return FileInfo{}, false
 	}
 
 	info := FileInfo{
 		Name:    filepath.Base(relativePath),
-		Path:    relativePath,
+		Path:    filepath.ToSlash(relativePath),
 		IsDir:   stat.IsDir(),
 		ModTime: stat.ModTime().Unix(),
 	}
 
+	q := strings.ToLower(strings.TrimSpace(query))
+
 	if !stat.IsDir() {
+		ft := getFileType(fullPath)
+		if allowedTypes != nil && !allowedTypes[ft] {
+			return FileInfo{}, false
+		}
+		if q != "" && !strings.Contains(strings.ToLower(info.Name), q) {
+			return FileInfo{}, false
+		}
 		info.Size = stat.Size()
-		info.Type = getFileType(fullPath)
-		return info, nil
+		info.Type = ft
+		return info, true
 	}
 
-	// Read directory contents
 	entries, err := os.ReadDir(fullPath)
 	if err != nil {
-		return info, nil
+		return FileInfo{}, false
 	}
 
 	var children []FileInfo
 	for _, entry := range entries {
 		name := entry.Name()
-
-		// Skip hidden files and directories
 		if m.isHidden(name, entry.IsDir()) {
 			continue
 		}
 
 		childPath := filepath.Join(fullPath, name)
 		childRelPath := filepath.Join(relativePath, name)
-
-		childInfo, err := m.buildTree(childPath, childRelPath, depth+1)
-		if err != nil {
+		childInfo, ok := m.buildFilteredTree(childPath, childRelPath, q, allowedTypes, pruneEmptyDirs)
+		if !ok {
 			continue
 		}
 		children = append(children, childInfo)
 	}
 
-	// Sort: directories first, then alphabetically
+	if pruneEmptyDirs && len(children) == 0 {
+		return FileInfo{}, false
+	}
+
 	sort.Slice(children, func(i, j int) bool {
 		if children[i].IsDir != children[j].IsDir {
 			return children[i].IsDir
@@ -110,7 +138,7 @@ func (m *Manager) buildTree(fullPath, relativePath string, depth int) (FileInfo,
 	})
 
 	info.Children = children
-	return info, nil
+	return info, true
 }
 
 // ReadFile reads a file's content
@@ -126,6 +154,107 @@ func (m *Manager) ReadFile(relativePath string) (string, error) {
 	}
 
 	return string(content), nil
+}
+
+func (m *Manager) ReadFileBytes(relativePath string) ([]byte, error) {
+	if !m.isValidPath(relativePath) {
+		return nil, fmt.Errorf("invalid path: %s", relativePath)
+	}
+
+	fullPath := filepath.Join(m.projectDir, relativePath)
+	return os.ReadFile(fullPath)
+}
+
+func (m *Manager) IsValidPath(relativePath string) bool {
+	return m.isValidPath(relativePath)
+}
+
+func (m *Manager) SearchImages(folders []string, query string) ([]FileInfo, error) {
+	allowedExt := map[string]bool{
+		".jpg":  true,
+		".jpeg": true,
+		".png":  true,
+		".gif":  true,
+		".webp": true,
+		".bmp":  true,
+		".tiff": true,
+		".svg":  true,
+	}
+
+	q := strings.ToLower(strings.TrimSpace(query))
+	var results []FileInfo
+
+	for _, folder := range folders {
+		if folder == "" {
+			continue
+		}
+		if !m.isValidPath(folder) {
+			continue
+		}
+
+		rootAbs := filepath.Join(m.projectDir, folder)
+		if _, err := os.Stat(rootAbs); err != nil {
+			continue
+		}
+
+		walkErr := filepath.WalkDir(rootAbs, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return nil
+			}
+			name := d.Name()
+			if name == "" {
+				return nil
+			}
+			if d.IsDir() {
+				if m.isHidden(name, true) {
+					return fs.SkipDir
+				}
+				return nil
+			}
+
+			if m.isHidden(name, false) {
+				return nil
+			}
+
+			ext := strings.ToLower(filepath.Ext(name))
+			if !allowedExt[ext] {
+				return nil
+			}
+			if q != "" && !strings.Contains(strings.ToLower(name), q) {
+				return nil
+			}
+
+			stat, statErr := os.Stat(path)
+			if statErr != nil {
+				return nil
+			}
+
+			relAbs, relErr := filepath.Rel(m.projectDir, path)
+			if relErr != nil {
+				return nil
+			}
+			relAbs = filepath.ToSlash(relAbs)
+
+			results = append(results, FileInfo{
+				Name:    name,
+				Path:    relAbs,
+				IsDir:   false,
+				Size:    stat.Size(),
+				ModTime: stat.ModTime().Unix(),
+				Type:    "image",
+			})
+			return nil
+		})
+		if walkErr != nil {
+			return nil, walkErr
+		}
+	}
+
+	sort.Slice(results, func(i, j int) bool {
+		return strings.ToLower(results[i].Path) < strings.ToLower(results[j].Path)
+	})
+
+	return results, nil
 }
 
 // WriteFile writes content to a file

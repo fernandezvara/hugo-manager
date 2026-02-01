@@ -755,7 +755,7 @@ body {
 }
 
 .modal-lg {
-  max-width: 700px;
+  max-width: 740px;
 }
 
 .modal-header {
@@ -1115,4 +1115,21 @@ body {
 
 .text-muted {
   color: #6c757d;
+}
+
+.image-preview-modal {
+  border: 1px solid #e5e7eb;
+  padding: 8px;
+  height: 360px;
+  width: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-browse-tree {
+  height: 360px;
+  width: 320px;
+  overflow: auto;
+  border: 1px solid #e5e7eb;
 }

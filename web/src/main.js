@@ -103,6 +103,13 @@ export function createApp() {
     imagePreview: null,
     imageFolders: [],
     imagePresets: [],
+    imageModalTab: "upload",
+    imageBrowseQuery: "",
+    imageBrowseResults: [],
+    imageBrowseTree: [],
+    imageBrowseExpandedDirs: new Set([]),
+    imageBrowseSelected: null,
+    imageBrowsing: false,
     uploadOptions: {
       folder: "",
       filename: "",
@@ -194,6 +201,90 @@ export function createApp() {
       } catch (err) {
         this.showToast("Failed to load files", "error");
       }
+    },
+
+    async loadImageBrowseTree() {
+      this.imageBrowsing = true;
+      try {
+        const params = new URLSearchParams();
+        params.set("show", "images");
+        if (this.imageBrowseQuery) params.set("q", this.imageBrowseQuery);
+
+        const res = await fetch(`/api/files?${params.toString()}`);
+        const data = await res.json();
+        this.imageBrowseTree = Array.isArray(data) ? data : [];
+
+        // Default expand the root folders we got back
+        const nextExpanded = new Set(this.imageBrowseExpandedDirs);
+        for (const item of this.imageBrowseTree) {
+          if (item?.isDir && item?.path) nextExpanded.add(item.path);
+        }
+        this.imageBrowseExpandedDirs = nextExpanded;
+      } catch (err) {
+        this.showToast("Failed to browse images", "error");
+        this.imageBrowseTree = [];
+      } finally {
+        this.imageBrowsing = false;
+      }
+    },
+
+    toggleImageBrowseDir(path) {
+      if (this.imageBrowseExpandedDirs.has(path)) {
+        this.imageBrowseExpandedDirs.delete(path);
+      } else {
+        this.imageBrowseExpandedDirs.add(path);
+      }
+      this.imageBrowseExpandedDirs = new Set(this.imageBrowseExpandedDirs);
+    },
+
+    renderImageBrowseTreeItem(item, depth) {
+      const indent = depth * 16;
+      const isExpanded = this.imageBrowseExpandedDirs.has(item.path);
+      const isSelected = this.imageBrowseSelected?.path === item.path;
+
+      let html = `<div class="tree-item" style="padding-left: ${indent}px">`;
+
+      if (item.isDir) {
+        html += `
+          <div class="tree-item-content" @click="toggleImageBrowseDir('${item.path}')">
+            <span class="tree-toggle ${isExpanded ? "expanded" : ""}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </span>
+            <span class="tree-icon folder">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+              </svg>
+            </span>
+            <span class="tree-name">${item.name}</span>
+          </div>
+        `;
+
+        if (item.children && item.children.length > 0) {
+          html += `<div class="tree-children ${isExpanded ? "expanded" : ""}">`;
+          for (const child of item.children) {
+            html += this.renderImageBrowseTreeItem(child, depth + 1);
+          }
+          html += "</div>";
+        }
+      } else {
+        const iconClass = `file-${item.type || "text"}`;
+        html += `
+          <div class="tree-item-content ${isSelected ? "active" : ""}" @click="selectBrowseImage(${JSON.stringify(item).replace(/"/g, "&quot;")})">
+            <span class="tree-toggle" style="visibility: hidden">
+              <svg viewBox="0 0 24 24" width="12" height="12"></svg>
+            </span>
+            <span class="tree-icon ${iconClass}">
+              ${this.getFileIconSvg(item.type)}
+            </span>
+            <span class="tree-name">${item.name}</span>
+          </div>
+        `;
+      }
+
+      html += "</div>";
+      return html;
     },
 
     async openFile(path, type) {
@@ -520,16 +611,85 @@ Content goes here...
     formatImage() {
       if (!this.editor) return;
 
+      this.openImageSelector("browse");
+    },
+
+    openImageSelector(tab = "upload") {
+      this.imageModalTab = tab;
+
+      if (tab === "upload") {
+        this.openImageUpload();
+        return;
+      }
+
+      // Browse tab
+      this.imageFile = null;
+      this.imagePreview = null;
+      this.uploadResult = null;
+      this.uploadFromContext = false;
+
+      this.showImageModal = true;
+      this.loadImageBrowseTree();
+    },
+
+    setImageModalTab(tab) {
+      this.imageModalTab = tab;
+      if (tab === "browse") {
+        this.loadImageBrowseTree();
+      }
+    },
+
+    getRawFileUrl(path) {
+      return `/api/files/raw?path=${encodeURIComponent(path)}`;
+    },
+
+    toPublicImageUrl(path) {
+      if (!path) return "";
+      if (path.startsWith("static/")) {
+        return "/" + path.substring("static/".length);
+      }
+      return "/" + path;
+    },
+
+    async loadImageBrowseResults() {
+      this.imageBrowsing = true;
+      try {
+        const params = new URLSearchParams();
+        if (this.imageBrowseQuery) params.set("q", this.imageBrowseQuery);
+
+        const res = await fetch(`/api/files/search?${params.toString()}`);
+        const data = await res.json();
+        this.imageBrowseResults = Array.isArray(data) ? data : [];
+      } catch (err) {
+        this.showToast("Failed to browse images", "error");
+        this.imageBrowseResults = [];
+      } finally {
+        this.imageBrowsing = false;
+      }
+    },
+
+    selectBrowseImage(img) {
+      this.imageBrowseSelected = img;
+    },
+
+    insertBrowseImage() {
+      if (!this.editor || !this.imageBrowseSelected) return;
+
+      const publicUrl = this.toPublicImageUrl(this.imageBrowseSelected.path);
+      const insert = `![alt text](${publicUrl})`;
+
       const view = this.editor;
       view.dispatch(
         view.state.changeByRange((range) => {
-          const insert = "![alt text](/images/)";
           return {
             changes: { from: range.from, to: range.to, insert },
-            range: { from: range.from + 11, to: range.from + 20 },
+            range: { from: range.from + 2, to: range.from + 10 },
           };
         }),
       );
+
+      this.showImageModal = false;
+      this.showToast("Image inserted", "success");
     },
 
     formatCode() {

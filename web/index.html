@@ -103,19 +103,6 @@
           </svg>
           Logs
         </button>
-        <button @click="openImageUpload()" class="btn btn-sm btn-primary">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <path d="M21 15l-5-5L5 21" />
-          </svg>
-          Upload Image
-        </button>
       </div>
     </header>
 
@@ -450,147 +437,236 @@
     >
       <div class="modal-content modal-lg">
         <div class="modal-header">
-          <h3>Upload Image</h3>
+          <h3>Image</h3>
           <button @click="showImageModal = false" class="btn btn-icon">
             ×
           </button>
         </div>
         <div class="modal-body">
-          <div
-            class="upload-zone"
-            @dragover.prevent="dragOver = true"
-            @dragleave="dragOver = false"
-            @drop.prevent="handleDrop($event)"
-            :class="{ 'drag-over': dragOver }"
-          >
-            <input
-              type="file"
-              id="image-input"
-              accept="image/*"
-              @change="handleImageSelect($event)"
-              hidden
-            />
-            <label for="image-input" class="upload-label">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-              <span>Drop image here or click to select</span>
-            </label>
+          <div class="toolbar-group" style="margin-bottom: 12px">
+            <button
+              class="btn btn-sm"
+              :class="{ 'btn-primary': imageModalTab === 'upload' }"
+              @click="setImageModalTab('upload')"
+              type="button"
+            >
+              Upload
+            </button>
+            <button
+              class="btn btn-sm"
+              :class="{ 'btn-primary': imageModalTab === 'browse' }"
+              @click="setImageModalTab('browse')"
+              type="button"
+            >
+              Browse
+            </button>
           </div>
 
-          <div x-show="imagePreview" class="image-preview-container">
-            <img :src="imagePreview" alt="Preview" class="image-preview" />
-          </div>
-
-          <div x-show="imageFile" class="upload-options">
-            <!-- Folder selector - only show when not from context -->
-            <div class="form-group" x-show="!uploadFromContext">
-              <label>Folder</label>
-              <select x-model="uploadOptions.folder">
-                <template x-for="folder in imageFolders" :key="folder.path">
-                  <option :value="folder.path" x-text="folder.name"></option>
-                </template>
-              </select>
-            </div>
-
-            <!-- Context folder display - only show when from context -->
-            <div class="form-group" x-show="uploadFromContext">
-              <label>Upload to</label>
-              <div class="context-folder-display">
-                <span x-text="uploadOptions.folder || '...'"></span>
-              </div>
-            </div>
-
+          <!-- Browse Tab -->
+          <div x-show="imageModalTab === 'browse'">
             <div class="form-group">
-              <label>Filename</label>
-              <input type="text" x-model="uploadOptions.filename" />
-            </div>
-            <div class="form-group">
-              <label>Preset</label>
-              <select x-model="uploadOptions.preset" @change="applyPreset()">
-                <template x-for="preset in imagePresets" :key="preset.name">
-                  <option :value="preset.name" x-text="preset.name"></option>
-                </template>
-              </select>
-            </div>
-            <div class="form-group" x-show="uploadOptions.preset === 'Custom'">
-              <label>Custom widths (comma separated)</label>
+              <label>Search</label>
               <input
                 type="text"
-                x-model="uploadOptions.customWidths"
-                placeholder="320, 640, 1024"
+                x-model="imageBrowseQuery"
+                @input.debounce.300ms="loadImageBrowseTree()"
+                placeholder="logo, header, ..."
               />
             </div>
+
+            <div class="form-group" x-show="imageBrowsing">
+              <small>Loading...</small>
+            </div>
+
             <div class="form-group">
-              <label
-                >Quality: <span x-text="uploadOptions.quality"></span>%</label
+              <label>Preview</label>
+              <div
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"
               >
-              <input
-                type="range"
-                min="1"
-                max="100"
-                x-model="uploadOptions.quality"
-              />
+                <div class="image-browse-tree">
+                  <template x-for="item in imageBrowseTree" :key="item.path">
+                    <div x-html="renderImageBrowseTreeItem(item, 0)"></div>
+                  </template>
+                </div>
+
+                <div>
+                  <div class="form-group">
+                    <div class="image-preview-modal">
+                      <template x-if="imageBrowseSelected">
+                        <img
+                          :src="getRawFileUrl(imageBrowseSelected.path)"
+                          style="
+                            max-width: 100%;
+                            max-height: 240px;
+                            object-fit: contain;
+                          "
+                        />
+                      </template>
+                      <template x-if="!imageBrowseSelected">
+                        <small style="color: #6b7280">Select an image</small>
+                      </template>
+                    </div>
+                  </div>
+                  <div class="form-group" x-show="imageBrowseSelected">
+                    <label>Public URL</label>
+                    <div class="code-block">
+                      <code
+                        x-text="toPublicImageUrl(imageBrowseSelected?.path)"
+                      ></code>
+                      <button
+                        @click="copyToClipboard(toPublicImageUrl(imageBrowseSelected?.path))"
+                        class="btn btn-sm"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div x-show="uploadResult" class="upload-result">
-            <h4>Generated Images</h4>
-            <div class="variant-list">
-              <template
-                x-for="v in uploadResult?.variants || []"
-                :key="v.filename"
-              >
-                <div class="variant-item">
-                  <span x-text="v.filename"></span>
-                  <span
-                    class="variant-size"
-                    x-text="formatBytes(v.size)"
-                  ></span>
+          <!-- Upload Tab -->
+          <div x-show="imageModalTab === 'upload'">
+            <div
+              class="upload-zone"
+              @dragover.prevent="dragOver = true"
+              @dragleave="dragOver = false"
+              @drop.prevent="handleDrop($event)"
+              :class="{ 'drag-over': dragOver }"
+            >
+              <input
+                type="file"
+                id="image-input"
+                accept="image/*"
+                @change="handleImageSelect($event)"
+                hidden
+              />
+              <label for="image-input" class="upload-label">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span>Drop image here or click to select</span>
+              </label>
+            </div>
+
+            <div x-show="imagePreview" class="image-preview-container">
+              <img :src="imagePreview" alt="Preview" class="image-preview" />
+            </div>
+
+            <div x-show="imageFile" class="upload-options">
+              <!-- Folder selector - only show when not from context -->
+              <div class="form-group" x-show="!uploadFromContext">
+                <label>Folder</label>
+                <select x-model="uploadOptions.folder">
+                  <template x-for="folder in imageFolders" :key="folder.path">
+                    <option :value="folder.path" x-text="folder.name"></option>
+                  </template>
+                </select>
+              </div>
+
+              <!-- Context folder display - only show when from context -->
+              <div class="form-group" x-show="uploadFromContext">
+                <label>Upload to</label>
+                <div class="context-folder-display">
+                  <span x-text="uploadOptions.folder || '...'"></span>
                 </div>
-              </template>
-            </div>
-            <div class="form-group">
-              <label>Shortcode (for Hugo)</label>
-              <div class="code-block">
-                <code x-text="uploadResult?.shortcode"></code>
-                <button
-                  @click="copyToClipboard(uploadResult?.shortcode)"
-                  class="btn btn-sm"
+              </div>
+
+              <div class="form-group">
+                <label>Filename</label>
+                <input type="text" x-model="uploadOptions.filename" />
+              </div>
+              <div class="form-group">
+                <label>Preset</label>
+                <select x-model="uploadOptions.preset" @change="applyPreset()">
+                  <template x-for="preset in imagePresets" :key="preset.name">
+                    <option :value="preset.name" x-text="preset.name"></option>
+                  </template>
+                </select>
+              </div>
+              <div
+                class="form-group"
+                x-show="uploadOptions.preset === 'Custom'"
+              >
+                <label>Custom widths (comma separated)</label>
+                <input
+                  type="text"
+                  x-model="uploadOptions.customWidths"
+                  placeholder="320, 640, 1024"
+                />
+              </div>
+              <div class="form-group">
+                <label
+                  >Quality: <span x-text="uploadOptions.quality"></span>%</label
                 >
-                  Copy
-                </button>
+                <input
+                  type="range"
+                  min="1"
+                  max="100"
+                  x-model="uploadOptions.quality"
+                />
               </div>
             </div>
-            <div class="form-group">
-              <label>HTML (for direct use)</label>
-              <div class="code-block">
-                <code x-text="uploadResult?.html"></code>
-                <button
-                  @click="copyToClipboard(uploadResult?.html)"
-                  class="btn btn-sm"
+
+            <div x-show="uploadResult" class="upload-result">
+              <h4>Generated Images</h4>
+              <div class="variant-list">
+                <template
+                  x-for="v in uploadResult?.variants || []"
+                  :key="v.filename"
                 >
-                  Copy
-                </button>
+                  <div class="variant-item">
+                    <span x-text="v.filename"></span>
+                    <span
+                      class="variant-size"
+                      x-text="formatBytes(v.size)"
+                    ></span>
+                  </div>
+                </template>
               </div>
-            </div>
-            <div class="form-group">
-              <label>Srcset (raw)</label>
-              <div class="code-block">
-                <code x-text="uploadResult?.srcset"></code>
-                <button
-                  @click="copyToClipboard(uploadResult?.srcset)"
-                  class="btn btn-sm"
-                >
-                  Copy
-                </button>
+              <div class="form-group">
+                <label>Shortcode (for Hugo)</label>
+                <div class="code-block">
+                  <code x-text="uploadResult?.shortcode"></code>
+                  <button
+                    @click="copyToClipboard(uploadResult?.shortcode)"
+                    class="btn btn-sm"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>HTML (for direct use)</label>
+                <div class="code-block">
+                  <code x-text="uploadResult?.html"></code>
+                  <button
+                    @click="copyToClipboard(uploadResult?.html)"
+                    class="btn btn-sm"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Srcset (raw)</label>
+                <div class="code-block">
+                  <code x-text="uploadResult?.srcset"></code>
+                  <button
+                    @click="copyToClipboard(uploadResult?.srcset)"
+                    class="btn btn-sm"
+                  >
+                    Copy
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -598,9 +674,18 @@
         <div class="modal-footer">
           <button @click="showImageModal = false" class="btn">Cancel</button>
           <button
+            x-show="imageModalTab === 'browse'"
+            @click="insertBrowseImage()"
+            class="btn btn-primary"
+            :disabled="!imageBrowseSelected"
+          >
+            Insert
+          </button>
+          <button
             @click="uploadImage()"
             class="btn btn-primary"
             :disabled="!imageFile || uploading"
+            x-show="imageModalTab === 'upload'"
           >
             <span x-show="!uploading">Upload & Process</span>
             <span x-show="uploading">Processing...</span>

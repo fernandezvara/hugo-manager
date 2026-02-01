@@ -130,6 +130,8 @@ func (s *Server) setupRoutes(r chi.Router) {
 		// File management routes
 		r.Route("/files", func(r chi.Router) {
 			r.Get("/", s.handleFiles)
+			r.Get("/search", s.handleFileSearch)
+			r.Get("/raw", s.handleFileRaw)
 			r.Get("/{path}", s.handleFileGet)
 			r.Put("/{path}", s.handleFilePut)
 			r.Post("/{path}", s.handleFilePost)
