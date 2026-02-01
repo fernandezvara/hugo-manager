@@ -73,3 +73,37 @@ file_tree:
     - node_modules
     - public
     - resources
+
+# Document templates
+templates:
+  content_page:
+    title:
+      type: text
+      default: "Page Title"
+    description:
+      type: textarea
+      default: ""
+    weight:
+      type: number
+    layout:
+      type: text
+      default: "single"
+  
+  blog_post:
+    title:
+      type: text
+      default: "Blog Post Title"
+    description:
+      type: textarea
+      default: ""
+    date:
+      type: date
+    author:
+      type: text
+      default: ""
+    tags:
+      type: text
+      default: ""
+    draft:
+      type: bool
+      default: true

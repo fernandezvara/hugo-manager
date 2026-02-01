@@ -1,21 +1,23 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
 
-const ConfigFileName = "github.com/fernandezvara/hugo-manager.yaml"
+const ConfigFileName = "hugo-manager.yaml"
 
 // Config represents the hugo-manager configuration
 type Config struct {
-	Server   ServerConfig   `yaml:"server" json:"server"`
-	Hugo     HugoConfig     `yaml:"hugo" json:"hugo"`
-	Editor   EditorConfig   `yaml:"editor" json:"editor"`
-	Images   ImagesConfig   `yaml:"images" json:"images"`
-	FileTree FileTreeConfig `yaml:"file_tree" json:"file_tree"`
+	Server    ServerConfig    `yaml:"server" json:"server"`
+	Hugo      HugoConfig      `yaml:"hugo" json:"hugo"`
+	Editor    EditorConfig    `yaml:"editor" json:"editor"`
+	Images    ImagesConfig    `yaml:"images" json:"images"`
+	FileTree  FileTreeConfig  `yaml:"file_tree" json:"file_tree"`
+	Templates TemplatesConfig `yaml:"templates" json:"templates"`
 }
 
 type ServerConfig struct {
@@ -38,6 +40,13 @@ type EditorConfig struct {
 	AutoSave      bool   `yaml:"auto_save" json:"auto_save"`
 	AutoSaveDelay int    `yaml:"auto_save_delay" json:"auto_save_delay"`
 }
+
+type TemplateField struct {
+	Type    string `yaml:"type" json:"type"`
+	Default string `yaml:"default" json:"default"`
+}
+
+type TemplatesConfig map[string]map[string]TemplateField
 
 type ImagesConfig struct {
 	BaseDir        string        `yaml:"base_dir" json:"base_dir"`
@@ -117,6 +126,7 @@ func Default() *Config {
 				"resources",
 			},
 		},
+		Templates: TemplatesConfig{},
 	}
 }
 
@@ -132,6 +142,11 @@ func Load(projectDir string) (*Config, error) {
 	cfg := Default()
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, err
+	}
+
+	// Validate template configuration
+	if err := validateTemplates(cfg.Templates); err != nil {
+		return nil, fmt.Errorf("template configuration error: %w", err)
 	}
 
 	return cfg, nil
@@ -153,6 +168,40 @@ func Save(projectDir string, cfg *Config) error {
 	data = append(header, data...)
 
 	return os.WriteFile(configPath, data, 0644)
+}
+
+// validateTemplates validates the template configuration
+func validateTemplates(templates TemplatesConfig) error {
+	validTypes := map[string]bool{
+		"text":     true,
+		"textarea": true,
+		"number":   true,
+		"bool":     true,
+		"date":     true,
+	}
+
+	for templateName, fields := range templates {
+		if templateName == "" {
+			return fmt.Errorf("template name cannot be empty")
+		}
+
+		for fieldName, field := range fields {
+			if fieldName == "" {
+				return fmt.Errorf("template '%s': field name cannot be empty", templateName)
+			}
+
+			if field.Type == "" {
+				return fmt.Errorf("template '%s': field '%s': type cannot be empty", templateName, fieldName)
+			}
+
+			if !validTypes[field.Type] {
+				return fmt.Errorf("template '%s': field '%s': invalid type '%s', must be one of: text, textarea, number, bool, date",
+					templateName, fieldName, field.Type)
+			}
+		}
+	}
+
+	return nil
 }
 
 // GetConfigPath returns the path to the config file

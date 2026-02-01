@@ -113,6 +113,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	configJSON, _ := json.Marshal(map[string]interface{}{
 		"hugoPort":    s.config.Hugo.Port,
 		"editor":      s.config.Editor,
+		"templates":   s.config.Templates,
 		"projectName": filepath.Base(s.projectDir),
 	})
 
@@ -163,21 +164,44 @@ func (s *Server) handleFile(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		var req struct {
 			Content string `json:"content"`
+			NewName string `json:"newName"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			s.jsonError(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
-		if err := s.fileMgr.WriteFile(path, req.Content); err != nil {
-			s.jsonError(w, "Failed to save file: "+err.Error(), http.StatusInternalServerError)
-			return
+
+		if req.NewName != "" {
+			// Rename operation
+			newPath := filepath.Join(filepath.Dir(path), req.NewName)
+			if err := s.fileMgr.RenameFile(path, newPath); err != nil {
+				if strings.Contains(err.Error(), "already exists") {
+					s.jsonError(w, "Destination already exists", http.StatusConflict)
+				} else if strings.Contains(err.Error(), "does not exist") {
+					s.jsonError(w, "Source does not exist", http.StatusNotFound)
+				} else if strings.Contains(err.Error(), "invalid path") {
+					s.jsonError(w, "Invalid path", http.StatusBadRequest)
+				} else {
+					s.jsonError(w, "Failed to rename: "+err.Error(), http.StatusInternalServerError)
+				}
+				return
+			}
+			s.jsonResponse(w, map[string]string{"status": "renamed"})
+		} else {
+			// Save operation
+			if err := s.fileMgr.WriteFile(path, req.Content); err != nil {
+				s.jsonError(w, "Failed to save file: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			s.jsonResponse(w, map[string]string{"status": "saved"})
 		}
-		s.jsonResponse(w, map[string]string{"status": "saved"})
 
 	case http.MethodPost:
 		var req struct {
-			Content string `json:"content"`
-			IsDir   bool   `json:"isDir"`
+			Content  string                 `json:"content"`
+			IsDir    bool                   `json:"isDir"`
+			Template string                 `json:"template"`
+			Data     map[string]interface{} `json:"data"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			s.jsonError(w, "Invalid request body", http.StatusBadRequest)
@@ -185,11 +209,32 @@ func (s *Server) handleFile(w http.ResponseWriter, r *http.Request) {
 		}
 		if req.IsDir {
 			if err := s.fileMgr.CreateDir(path); err != nil {
-				s.jsonError(w, "Failed to create directory: "+err.Error(), http.StatusInternalServerError)
+				if strings.Contains(err.Error(), "already exists") {
+					s.jsonError(w, "Directory already exists", http.StatusConflict)
+				} else if strings.Contains(err.Error(), "invalid path") {
+					s.jsonError(w, "Invalid directory path", http.StatusBadRequest)
+				} else {
+					s.jsonError(w, "Failed to create directory: "+err.Error(), http.StatusInternalServerError)
+				}
+				return
+			}
+		} else if req.Template != "" {
+			// Create from template
+			if err := s.fileMgr.CreateFileFromTemplate(path, req.Template, req.Data, s.config.Templates); err != nil {
+				if err.Error() == "file already exists: "+path {
+					s.jsonError(w, "File already exists", http.StatusConflict)
+					return
+				}
+				s.jsonError(w, "Failed to create file from template: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 		} else {
+			// Regular file creation
 			if err := s.fileMgr.CreateFile(path, req.Content); err != nil {
+				if err.Error() == "file already exists: "+path {
+					s.jsonError(w, "File already exists", http.StatusConflict)
+					return
+				}
 				s.jsonError(w, "Failed to create file: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -198,7 +243,15 @@ func (s *Server) handleFile(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodDelete:
 		if err := s.fileMgr.DeleteFile(path); err != nil {
-			s.jsonError(w, "Failed to delete file: "+err.Error(), http.StatusInternalServerError)
+			if strings.Contains(err.Error(), "does not exist") {
+				s.jsonError(w, "File or directory does not exist", http.StatusNotFound)
+			} else if strings.Contains(err.Error(), "not empty") {
+				s.jsonError(w, "Directory not empty", http.StatusConflict)
+			} else if strings.Contains(err.Error(), "invalid path") {
+				s.jsonError(w, "Invalid path", http.StatusBadRequest)
+			} else {
+				s.jsonError(w, "Failed to delete: "+err.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 		s.jsonResponse(w, map[string]string{"status": "deleted"})

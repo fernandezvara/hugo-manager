@@ -45,6 +45,7 @@ func main() {
 	// Load or create configuration
 	cfg, err := config.Load(absProjectDir)
 	if err != nil {
+		fmt.Printf("Config load error: %v\n", err)
 		if *initConfig {
 			cfg = config.Default()
 			if err := config.Save(absProjectDir, cfg); err != nil {
@@ -54,6 +55,7 @@ func main() {
 			os.Exit(0)
 		}
 		// Use default config if none exists
+		fmt.Printf("Using default config due to load error\n")
 		cfg = config.Default()
 	}
 

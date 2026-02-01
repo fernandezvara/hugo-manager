@@ -161,6 +161,63 @@ func (m *Manager) CreateFile(relativePath, content string) error {
 	return m.WriteFile(relativePath, content)
 }
 
+// CreateFileFromTemplate creates a new file using a template
+func (m *Manager) CreateFileFromTemplate(relativePath, templateName string, templateData map[string]interface{}, templates config.TemplatesConfig) error {
+	if !m.isValidPath(relativePath) {
+		return fmt.Errorf("invalid path: %s", relativePath)
+	}
+
+	fullPath := filepath.Join(m.projectDir, relativePath)
+
+	// Check if file already exists
+	if _, err := os.Stat(fullPath); err == nil {
+		return fmt.Errorf("file already exists: %s", relativePath)
+	}
+
+	// Get the template
+	template, exists := templates[templateName]
+	if !exists {
+		return fmt.Errorf("template not found: %s", templateName)
+	}
+
+	// Generate front matter YAML
+	frontMatter := generateFrontMatter(template, templateData)
+
+	// Create content with front matter
+	content := fmt.Sprintf("---\n%s---\n\n", frontMatter)
+
+	return m.WriteFile(relativePath, content)
+}
+
+// generateFrontMatter generates YAML front matter from template data
+func generateFrontMatter(template map[string]config.TemplateField, data map[string]interface{}) string {
+	var lines []string
+
+	for fieldName, field := range template {
+		value, exists := data[fieldName]
+		if !exists || value == "" {
+			continue
+		}
+
+		switch field.Type {
+		case "text", "textarea", "date":
+			lines = append(lines, fmt.Sprintf("%s: %q", fieldName, value))
+		case "number":
+			lines = append(lines, fmt.Sprintf("%s: %v", fieldName, value))
+		case "bool":
+			if boolVal, ok := value.(bool); ok && boolVal {
+				lines = append(lines, fmt.Sprintf("%s: true", fieldName))
+			} else if strVal, ok := value.(string); ok == true && strVal == "true" {
+				lines = append(lines, fmt.Sprintf("%s: true", fieldName))
+			} else {
+				lines = append(lines, fmt.Sprintf("%s: false", fieldName))
+			}
+		}
+	}
+
+	return strings.Join(lines, "\n")
+}
+
 // DeleteFile deletes a file
 func (m *Manager) DeleteFile(relativePath string) error {
 	if !m.isValidPath(relativePath) {
