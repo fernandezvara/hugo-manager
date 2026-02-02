@@ -10,7 +10,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	_ "image/gif"
@@ -216,6 +218,112 @@ func (p *Processor) Process(reader io.Reader, opts UploadOptions) (*ProcessResul
 	result.Shortcode = p.generateShortcode(baseName, result)
 
 	// Generate raw HTML
+	result.HTML = p.generateHTML(baseName, result)
+
+	return result, nil
+}
+
+func (p *Processor) BuildResultFromProcessedVariants(selectedPath string) (*ProcessResult, error) {
+	selectedPath = filepath.ToSlash(strings.TrimSpace(selectedPath))
+	if selectedPath == "" {
+		return nil, fmt.Errorf("path is required")
+	}
+
+	fullSelectedPath := filepath.Join(p.projectDir, filepath.FromSlash(selectedPath))
+	stat, err := os.Stat(fullSelectedPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat selected image: %w", err)
+	}
+	if stat.IsDir() {
+		return nil, fmt.Errorf("selected path is a directory")
+	}
+
+	dirAbs := filepath.Dir(fullSelectedPath)
+	fileName := filepath.Base(fullSelectedPath)
+	fileExt := strings.ToLower(filepath.Ext(fileName))
+
+	variantRe := regexp.MustCompile(`^(?P<base>.+)\.(?P<w>\d+)x(?P<h>\d+)(?P<ext>\.[^.]+)$`)
+	m := variantRe.FindStringSubmatch(fileName)
+
+	baseName := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+	if m != nil {
+		baseName = m[variantRe.SubexpIndex("base")]
+		fileExt = strings.ToLower(m[variantRe.SubexpIndex("ext")])
+	}
+
+	entries, err := os.ReadDir(dirAbs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read image directory: %w", err)
+	}
+
+	result := &ProcessResult{Variants: []ProcessedImage{}}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if strings.ToLower(filepath.Ext(name)) != fileExt {
+			continue
+		}
+		mm := variantRe.FindStringSubmatch(name)
+		if mm == nil {
+			continue
+		}
+		entryBase := mm[variantRe.SubexpIndex("base")]
+		if entryBase != baseName {
+			continue
+		}
+		w, errW := strconv.Atoi(mm[variantRe.SubexpIndex("w")])
+		h, errH := strconv.Atoi(mm[variantRe.SubexpIndex("h")])
+		if errW != nil || errH != nil || w <= 0 || h <= 0 {
+			continue
+		}
+
+		absPath := filepath.Join(dirAbs, name)
+		st, err := os.Stat(absPath)
+		if err != nil {
+			continue
+		}
+
+		relPath, _ := filepath.Rel(p.projectDir, absPath)
+		relPath = strings.TrimPrefix(relPath, "static")
+		urlPath := strings.ReplaceAll(filepath.ToSlash(relPath), "\\", "/")
+
+		result.Variants = append(result.Variants, ProcessedImage{
+			Width:    w,
+			Height:   h,
+			Path:     filepath.ToSlash(relPath),
+			URL:      urlPath,
+			Size:     st.Size(),
+			Filename: name,
+		})
+	}
+
+	if len(result.Variants) == 0 {
+		relPath, _ := filepath.Rel(p.projectDir, fullSelectedPath)
+		relPath = strings.TrimPrefix(relPath, "static")
+		urlPath := strings.ReplaceAll(filepath.ToSlash(relPath), "\\", "/")
+		result.Variants = append(result.Variants, ProcessedImage{
+			Width:    0,
+			Height:   0,
+			Path:     filepath.ToSlash(relPath),
+			URL:      urlPath,
+			Size:     stat.Size(),
+			Filename: filepath.Base(relPath),
+		})
+	}
+
+	sort.Slice(result.Variants, func(i, j int) bool {
+		if result.Variants[i].Width == result.Variants[j].Width {
+			return result.Variants[i].Filename < result.Variants[j].Filename
+		}
+		return result.Variants[i].Width > result.Variants[j].Width
+	})
+
+	result.Original = result.Variants[0].URL
+	result.Srcset = p.generateSrcset(result.Variants)
+	result.Shortcode = p.generateShortcode(baseName, result)
 	result.HTML = p.generateHTML(baseName, result)
 
 	return result, nil

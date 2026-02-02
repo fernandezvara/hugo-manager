@@ -110,6 +110,19 @@ export function createApp() {
     imageBrowseExpandedDirs: new Set([]),
     imageBrowseSelected: null,
     imageBrowsing: false,
+    showImgShortcodeModal: false,
+    imgShortcodeQuery: "",
+    imgShortcodeTree: [],
+    imgShortcodeExpandedDirs: new Set([]),
+    imgShortcodeSelected: null,
+    imgShortcodeBrowsing: false,
+    imgShortcodeResult: null,
+    imgShortcodeOptions: {
+      alt: "",
+      class: "",
+      sizes: "",
+      loading: "",
+    },
     uploadOptions: {
       folder: "",
       filename: "",
@@ -201,6 +214,190 @@ export function createApp() {
       } catch (err) {
         this.showToast("Failed to load files", "error");
       }
+    },
+
+    async loadImgShortcodeTree() {
+      this.imgShortcodeBrowsing = true;
+      try {
+        const params = new URLSearchParams();
+        params.set("show", "images");
+        if (this.imgShortcodeQuery) params.set("q", this.imgShortcodeQuery);
+
+        const res = await fetch(`/api/files?${params.toString()}`);
+        const data = await res.json();
+        this.imgShortcodeTree = Array.isArray(data) ? data : [];
+
+        const nextExpanded = new Set(this.imgShortcodeExpandedDirs);
+        for (const item of this.imgShortcodeTree) {
+          if (item?.isDir && item?.path) nextExpanded.add(item.path);
+        }
+        this.imgShortcodeExpandedDirs = nextExpanded;
+      } catch (err) {
+        this.showToast("Failed to browse images", "error");
+        this.imgShortcodeTree = [];
+      } finally {
+        this.imgShortcodeBrowsing = false;
+      }
+    },
+
+    toggleImgShortcodeDir(path) {
+      if (this.imgShortcodeExpandedDirs.has(path)) {
+        this.imgShortcodeExpandedDirs.delete(path);
+      } else {
+        this.imgShortcodeExpandedDirs.add(path);
+      }
+      this.imgShortcodeExpandedDirs = new Set(this.imgShortcodeExpandedDirs);
+    },
+
+    renderImgShortcodeTreeItem(item, depth) {
+      const indent = depth * 16;
+      const isExpanded = this.imgShortcodeExpandedDirs.has(item.path);
+      const isSelected = this.imgShortcodeSelected?.path === item.path;
+
+      let html = `<div class="tree-item" style="padding-left: ${indent}px">`;
+
+      if (item.isDir) {
+        html += `
+          <div class="tree-item-content" @click="toggleImgShortcodeDir('${item.path}')">
+            <span class="tree-toggle ${isExpanded ? "expanded" : ""}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </span>
+            <span class="tree-icon folder">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+              </svg>
+            </span>
+            <span class="tree-name">${item.name}</span>
+          </div>
+        `;
+
+        if (item.children && item.children.length > 0) {
+          html += `<div class="tree-children ${isExpanded ? "expanded" : ""}">`;
+          for (const child of item.children) {
+            html += this.renderImgShortcodeTreeItem(child, depth + 1);
+          }
+          html += "</div>";
+        }
+      } else {
+        const iconClass = `file-${item.type || "text"}`;
+        html += `
+          <div class="tree-item-content ${isSelected ? "active" : ""}" @click="selectImgShortcodeImage(${JSON.stringify(item).replace(/"/g, "&quot;")})">
+            <span class="tree-toggle" style="visibility: hidden">
+              <svg viewBox="0 0 24 24" width="12" height="12"></svg>
+            </span>
+            <span class="tree-icon ${iconClass}">
+              ${this.getFileIconSvg(item.type)}
+            </span>
+            <span class="tree-name">${item.name}</span>
+          </div>
+        `;
+      }
+
+      html += "</div>";
+      return html;
+    },
+
+    guessAltFromFilename(name) {
+      if (!name) return "";
+      const base = name.replace(/\.[^.]+$/, "");
+      const m = base.match(/^(.*)\.(\d+)x(\d+)$/);
+      return (m ? m[1] : base) || "";
+    },
+
+    openImgShortcodeModal() {
+      if (!this.editor) {
+        this.showToast("Open a file first", "info");
+        return;
+      }
+
+      this.imgShortcodeSelected = null;
+      this.imgShortcodeResult = null;
+      this.imgShortcodeOptions = { alt: "", class: "", sizes: "", loading: "" };
+      this.showImgShortcodeModal = true;
+      this.loadImgShortcodeTree();
+    },
+
+    async selectImgShortcodeImage(img) {
+      this.imgShortcodeSelected = img;
+      this.imgShortcodeResult = null;
+      if (!this.imgShortcodeOptions.alt) {
+        this.imgShortcodeOptions.alt = this.guessAltFromFilename(img?.name || "");
+      }
+      await this.loadImgShortcodeResult();
+    },
+
+    async loadImgShortcodeResult() {
+      if (!this.imgShortcodeSelected?.path) return;
+      try {
+        const res = await fetch(
+          `/api/images/processed?path=${encodeURIComponent(this.imgShortcodeSelected.path)}`,
+        );
+        const data = await res.json();
+        if (data?.error) {
+          this.showToast(data.error, "error");
+          this.imgShortcodeResult = null;
+          return;
+        }
+        this.imgShortcodeResult = data;
+      } catch (err) {
+        this.showToast("Failed to build img shortcode", "error");
+        this.imgShortcodeResult = null;
+      }
+    },
+
+    get imgShortcodeFinal() {
+      if (!this.imgShortcodeResult?.original) return "";
+
+      const src = this.imgShortcodeResult.original;
+      const srcset = this.imgShortcodeResult.srcset || "";
+      const alt = (this.imgShortcodeOptions.alt || "alt text").trim();
+      const cls = (this.imgShortcodeOptions.class || "").trim();
+      const sizes = (this.imgShortcodeOptions.sizes || "").trim();
+      const loading = (this.imgShortcodeOptions.loading || "").trim();
+      const variants = Array.isArray(this.imgShortcodeResult.variants)
+        ? this.imgShortcodeResult.variants
+        : [];
+
+      let s = `{{< img src="${src}" alt="${alt}"`;
+
+      if (variants.length > 1 && srcset) {
+        s += ` srcset="${srcset}"`;
+      }
+      if (sizes) s += ` sizes="${sizes}"`;
+      if (cls) s += ` class="${cls}"`;
+      if (loading) s += ` loading="${loading}"`;
+      s += " >}}";
+      return s;
+    },
+
+    insertImgShortcode() {
+      if (!this.editor) return;
+      const insert = this.imgShortcodeFinal;
+      if (!insert) return;
+
+      const alt = (this.imgShortcodeOptions.alt || "alt text").trim();
+      const altStart = insert.indexOf('alt="');
+      const altFrom = altStart >= 0 ? altStart + 5 : insert.length;
+      const altTo = altStart >= 0 ? altFrom + alt.length : insert.length;
+
+      const view = this.editor;
+      view.dispatch(
+        view.state.changeByRange((range) => {
+          return {
+            changes: { from: range.from, to: range.to, insert },
+            range: {
+              from: range.from + altFrom,
+              to: range.from + altTo,
+            },
+          };
+        }),
+      );
+
+      this.showImgShortcodeModal = false;
+      view.focus();
+      this.showToast("img shortcode inserted", "success");
     },
 
     async loadImageBrowseTree() {
@@ -359,6 +556,7 @@ export function createApp() {
             doc: tab.content,
             extensions: [
               lineNumbers(),
+              EditorView.lineWrapping,
               markdown(),
               oneDark,
               keymap.of(defaultKeymap),
@@ -370,6 +568,9 @@ export function createApp() {
                 },
                 ".cm-content": {
                   padding: "12px",
+                },
+                ".cm-line": {
+                  overflowWrap: "anywhere",
                 },
                 ".cm-scroller": {
                   overflow: "auto",
@@ -769,17 +970,16 @@ Content goes here...
       const fromLine = doc.lineAt(state.selection.main.from);
       const toLine = doc.lineAt(state.selection.main.to);
 
-      const changes = [];
-      for (let lineNum = fromLine.number; lineNum <= toLine.number; lineNum++) {
-        const line = doc.line(lineNum);
-        changes.push({
-          from: line.from,
-          to: line.from,
-          insert: prefix,
-        });
-      }
+      const fromPos = fromLine.from;
+      const toPos = toLine.to;
+      const block = doc.sliceString(fromPos, toPos);
+      const lines = block.split("\n");
+      const next = lines.map((l) => prefix + l).join("\n");
 
-      this.editor.dispatch({ changes });
+      this.editor.dispatch({
+        changes: { from: fromPos, to: toPos, insert: next },
+        selection: { anchor: fromPos, head: fromPos + next.length },
+      });
       this.editor.focus();
     },
 

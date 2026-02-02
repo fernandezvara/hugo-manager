@@ -369,6 +369,28 @@ func (s *Server) handleImageUpload(w http.ResponseWriter, r *http.Request) {
 	s.jsonResponse(w, result, http.StatusOK)
 }
 
+// handleImageProcessed builds result (variants/srcset/shortcode) from already-processed image variants
+func (s *Server) handleImageProcessed(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Query().Get("path")
+	path = filepath.ToSlash(strings.TrimSpace(path))
+	if path == "" {
+		s.jsonError(w, http.StatusBadRequest, "path is required")
+		return
+	}
+	if !s.fileMgr.IsValidPath(path) {
+		s.jsonError(w, http.StatusBadRequest, "Invalid path")
+		return
+	}
+
+	result, err := s.imageMgr.BuildResultFromProcessedVariants(path)
+	if err != nil {
+		s.jsonError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	s.jsonResponse(w, result, http.StatusOK)
+}
+
 func (s *Server) handleImageFolders(w http.ResponseWriter, r *http.Request) {
 	folders := s.imageMgr.GetFolders()
 	s.jsonResponse(w, folders, http.StatusOK)

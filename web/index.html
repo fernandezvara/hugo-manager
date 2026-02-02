@@ -19,7 +19,7 @@
       }
     </style>
     <script>
-      window.APP_CONFIG = {{CONFIG_JSON}};
+      window.APP_CONFIG = JSON.parse(`{{CONFIG_JSON}}`);
     </script>
   </head>
   <body x-data="app" x-init="init()" @keydown.window="handleKeydown($event)">
@@ -284,6 +284,23 @@
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <path d="M21 15l-5-5L5 21" />
+              </svg>
+            </button>
+            <button
+              @click="openImgShortcodeModal()"
+              class="btn btn-icon"
+              title="Responsive img shortcode"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <path d="M7 16h10" />
+                <path d="M7 12h6" />
+                <path d="M7 8h10" />
               </svg>
             </button>
             <button @click="formatCode()" class="btn btn-icon" title="Code">
@@ -689,6 +706,120 @@
           >
             <span x-show="!uploading">Upload & Process</span>
             <span x-show="uploading">Processing...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="modal"
+      x-show="showImgShortcodeModal"
+      @click.self="showImgShortcodeModal = false"
+      x-cloak
+    >
+      <div class="modal-content modal-lg">
+        <div class="modal-header">
+          <h3>img</h3>
+          <button @click="showImgShortcodeModal = false" class="btn btn-icon">
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Search</label>
+            <input
+              type="text"
+              x-model="imgShortcodeQuery"
+              @input.debounce.300ms="loadImgShortcodeTree()"
+              placeholder="logo, header, ..."
+            />
+          </div>
+
+          <div class="form-group" x-show="imgShortcodeBrowsing">
+            <small>Loading...</small>
+          </div>
+
+          <div class="form-group">
+            <label>Preview</label>
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"
+            >
+              <div class="image-browse-tree">
+                <template x-for="item in imgShortcodeTree" :key="item.path">
+                  <div x-html="renderImgShortcodeTreeItem(item, 0)"></div>
+                </template>
+              </div>
+
+              <div>
+                <div class="form-group">
+                  <div class="image-preview-modal">
+                    <template x-if="imgShortcodeSelected">
+                      <img
+                        :src="getRawFileUrl(imgShortcodeSelected.path)"
+                        style="
+                          max-width: 100%;
+                          max-height: 240px;
+                          object-fit: contain;
+                        "
+                      />
+                    </template>
+                    <template x-if="!imgShortcodeSelected">
+                      <small style="color: #6b7280">Select an image</small>
+                    </template>
+                  </div>
+                </div>
+
+                <div class="form-group" x-show="imgShortcodeSelected">
+                  <label>Alt</label>
+                  <input type="text" x-model="imgShortcodeOptions.alt" />
+                </div>
+
+                <div class="form-group" x-show="imgShortcodeSelected">
+                  <label>Class</label>
+                  <input type="text" x-model="imgShortcodeOptions.class" />
+                </div>
+
+                <div class="form-group" x-show="imgShortcodeSelected">
+                  <label>Sizes</label>
+                  <input type="text" x-model="imgShortcodeOptions.sizes" />
+                </div>
+
+                <div class="form-group" x-show="imgShortcodeSelected">
+                  <label>Loading</label>
+                  <select x-model="imgShortcodeOptions.loading">
+                    <option value="">(default)</option>
+                    <option value="lazy">lazy</option>
+                    <option value="eager">eager</option>
+                  </select>
+                </div>
+
+                <div class="form-group" x-show="imgShortcodeResult">
+                  <label>Shortcode</label>
+                  <div class="code-block">
+                    <code x-text="imgShortcodeFinal"></code>
+                    <button
+                      @click="copyToClipboard(imgShortcodeFinal)"
+                      class="btn btn-sm"
+                      :disabled="!imgShortcodeFinal"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="showImgShortcodeModal = false" class="btn">
+            Cancel
+          </button>
+          <button
+            @click="insertImgShortcode()"
+            class="btn btn-primary"
+            :disabled="!imgShortcodeFinal"
+          >
+            Insert
           </button>
         </div>
       </div>
