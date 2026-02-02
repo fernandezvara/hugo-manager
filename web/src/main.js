@@ -94,6 +94,7 @@ export function createApp() {
     hugoStatus: { status: "stopped", message: "" },
     logs: [],
     ws: null,
+    reconnectTimer: null,
     previewReady: false,
     previewUrl: "about:blank",
     imageDimensions: null,
@@ -1451,16 +1452,20 @@ Content goes here...
 
     // WebSocket for logs
     connectWebSocket() {
+      // Prevent duplicate connections
+      if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+        return;
+      }
+
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       this.ws = new WebSocket(
-        `${protocol}//${window.location.host}/api/hugo/ws`,
+        `${protocol}//${location.host}/api/hugo/ws`,
       );
 
+      this.ws.onopen = () => {};
+
       this.ws.onmessage = (event) => {
-        console.log(event.data);
         const log = JSON.parse(event.data);
-        // Debug: log raw time field
-        console.log("[DEBUG] log.time:", log.time);
         this.logs.push(log);
         if (this.logs.length > 200) {
           this.logs = this.logs.slice(-200);
@@ -1475,8 +1480,21 @@ Content goes here...
         });
       };
 
-      this.ws.onclose = () => {
-        setTimeout(() => this.connectWebSocket(), 3000);
+      this.ws.onclose = (event) => {
+        this.ws = null;
+        // Avoid multiple reconnect timers
+        if (this.reconnectTimer) {
+          clearTimeout(this.reconnectTimer);
+        }
+        this.reconnectTimer = setTimeout(() => {
+          if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
+            this.connectWebSocket();
+          }
+        }, 3000);
+      };
+
+      this.ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
       };
     },
 
@@ -1486,6 +1504,18 @@ Content goes here...
 
     clearLogs() {
       this.logs = [];
+    },
+
+    destroy() {
+      // Clean up WebSocket and reconnect timer
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+      if (this.ws) {
+        this.ws.close();
+        this.ws = null;
+      }
     },
 
     formatTime(time) {

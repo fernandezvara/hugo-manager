@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"log"
 
@@ -704,17 +703,15 @@ func (s *Server) handleHugoWS(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	// Send logs to client every second
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
+	// Subscribe to log stream
+	ch := s.hugoMgr.Subscribe()
+	defer s.hugoMgr.Unsubscribe(ch)
 
-	for range ticker.C {
-		logs := s.hugoMgr.GetLogs(10)
-		data, err := json.Marshal(logs)
+	for entry := range ch {
+		data, err := json.Marshal(entry)
 		if err != nil {
 			continue
 		}
-
 		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
 			return
 		}

@@ -756,7 +756,7 @@ body {
 }
 
 .log-stderr .log-message {
-  color: var(--accent-warning);
+  color: var(--accent-error);
 }
 
 /* Modals */
