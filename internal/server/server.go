@@ -150,6 +150,7 @@ func (s *Server) setupRoutes(r chi.Router) {
 		r.Route("/images", func(r chi.Router) {
 			r.Post("/upload", s.handleImageUpload)
 			r.Post("/process", s.handleImageProcess)
+			r.Get("/processed", s.handleImageProcessed)
 			r.Get("/folders", s.handleImageFolders)
 			r.Get("/presets", s.handleImagePresets)
 		})
