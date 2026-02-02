@@ -566,6 +566,6 @@ func getFileType(path string) string {
 	case ".go":
 		return "go"
 	default:
-		return "text"
+		return "binary"
 	}
 }

@@ -159,6 +159,23 @@ func (s *Server) handleFileGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if file is editable
+	ext := strings.ToLower(filepath.Ext(path))
+	if len(ext) > 0 {
+		ext = ext[1:] // remove leading dot
+	}
+	editable := false
+	for _, e := range s.config.Editor.EditableExtensions {
+		if e == ext {
+			editable = true
+			break
+		}
+	}
+	if !editable {
+		s.jsonError(w, http.StatusForbidden, fmt.Sprintf("%s: This file type can't be opened in the editor.", path))
+		return
+	}
+
 	content, err := s.fileMgr.ReadFile(path)
 	if err != nil {
 		s.jsonError(w, http.StatusNotFound, "Failed to read file: "+err.Error())

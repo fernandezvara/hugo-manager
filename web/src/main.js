@@ -96,6 +96,7 @@ export function createApp() {
     ws: null,
     previewReady: false,
     previewUrl: "about:blank",
+    imageDimensions: null,
     statusInterval: null,
 
     // Image Upload
@@ -489,6 +490,25 @@ export function createApp() {
       const existingTab = this.tabs.find((t) => t.path === path);
       if (existingTab) {
         this.switchTab(path);
+        return;
+      }
+
+      // Determine file extension
+      const ext = path.split(".").pop().toLowerCase();
+      if (!this.config.editor?.editable_extensions) {
+        this.showToast("Error on Application: no configuration set", "error");
+        return;
+      }
+      const editable = this.config.editor.editable_extensions.includes(ext);
+
+      if (!editable) {
+        // If it's an image, preview it and show dimensions
+        if (type === "image") {
+          this.previewImage(path);
+          return;
+        }
+        // Otherwise show error toast
+        this.showToast(`${path}: This file type can't be opened in the editor.`, "error");
         return;
       }
 
@@ -1437,10 +1457,13 @@ Content goes here...
       );
 
       this.ws.onmessage = (event) => {
+        console.log(event.data);
         const log = JSON.parse(event.data);
+        // Debug: log raw time field
+        console.log("[DEBUG] log.time:", log.time);
         this.logs.push(log);
-        if (this.logs.length > 500) {
-          this.logs = this.logs.slice(-500);
+        if (this.logs.length > 200) {
+          this.logs = this.logs.slice(-200);
         }
 
         // Auto-scroll logs
@@ -1467,11 +1490,14 @@ Content goes here...
 
     formatTime(time) {
       const date = new Date(time);
-      return date.toLocaleTimeString();
+      return isNaN(date) ? "Invalid Date" : date.toLocaleTimeString();
     },
 
     // Preview
     updatePreviewUrl(path) {
+      // Reset image dimensions when switching to non-image
+      this.imageDimensions = null;
+
       if (!this.previewReady) return;
 
       // Convert file path to URL
@@ -1491,6 +1517,25 @@ Content goes here...
       if (iframe) {
         iframe.src = iframe.src;
       }
+    },
+
+    previewImage(path) {
+      const url = this.getRawFileUrl(path);
+      this.previewUrl = url;
+      this.previewReady = true;
+
+      // Load image to get dimensions
+      const img = new Image();
+      img.onload = () => {
+        this.imageDimensions = {
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        };
+      };
+      img.onerror = () => {
+        this.imageDimensions = null;
+      };
+      img.src = url;
     },
 
     previewLoaded() {

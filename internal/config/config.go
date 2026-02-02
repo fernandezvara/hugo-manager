@@ -45,13 +45,14 @@ type HugoConfig struct {
 }
 
 type EditorConfig struct {
-	Theme         string `yaml:"theme" json:"theme"`
-	FontSize      int    `yaml:"font_size" json:"font_size"`
-	TabSize       int    `yaml:"tab_size" json:"tab_size"`
-	WordWrap      bool   `yaml:"word_wrap" json:"word_wrap"`
-	LineNumbers   bool   `yaml:"line_numbers" json:"line_numbers"`
-	AutoSave      bool   `yaml:"auto_save" json:"auto_save"`
-	AutoSaveDelay int    `yaml:"auto_save_delay" json:"auto_save_delay"`
+	Theme              string   `yaml:"theme" json:"theme"`
+	FontSize           int      `yaml:"font_size" json:"font_size"`
+	TabSize            int      `yaml:"tab_size" json:"tab_size"`
+	WordWrap           bool     `yaml:"word_wrap" json:"word_wrap"`
+	LineNumbers        bool     `yaml:"line_numbers" json:"line_numbers"`
+	AutoSave           bool     `yaml:"auto_save" json:"auto_save"`
+	AutoSaveDelay      int      `yaml:"auto_save_delay" json:"auto_save_delay"`
+	EditableExtensions []string `yaml:"editable_extensions" json:"editable_extensions"`
 }
 
 type TemplateField struct {
@@ -111,6 +112,10 @@ func Default() *Config {
 			LineNumbers:   true,
 			AutoSave:      false,
 			AutoSaveDelay: 1000,
+			EditableExtensions: []string{
+				"md", "html", "css", "js", "json",
+				"yaml", "yml", "toml", "go", "scss",
+			},
 		},
 		Images: ImagesConfig{
 			DefaultQuality: 85,

@@ -415,12 +415,31 @@
           </div>
         </div>
         <div class="preview-container">
+          <!-- Image preview -->
+          <div x-show="imageDimensions" class="image-preview-wrapper">
+            <img :src="previewUrl" alt="Preview" class="image-preview-fit" />
+            <div x-show="imageDimensions" class="image-dimensions">
+              <span
+                >Width:
+                <strong x-text="imageDimensions?.width"></strong> px</span
+              >
+              <span
+                >Height:
+                <strong x-text="imageDimensions?.height"></strong> px</span
+              >
+            </div>
+          </div>
+          <!-- Hugo preview iframe -->
           <iframe
+            x-show="!imageDimensions"
             id="preview-frame"
             :src="previewUrl"
             @load="previewLoaded()"
           ></iframe>
-          <div x-show="!previewReady" class="preview-loading">
+          <div
+            x-show="!previewReady && !imageDimensions"
+            class="preview-loading"
+          >
             <div class="spinner"></div>
             <p>Waiting for Hugo server...</p>
           </div>
