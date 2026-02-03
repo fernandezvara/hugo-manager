@@ -191,7 +191,7 @@ func Save(projectDir string, cfg *Config) error {
 	}
 
 	header := []byte(`# Hugo Manager Configuration
-# See documentation at https://github.com/your-repo/hugo-manager
+# See documentation at https://github.com/fernandezvara/hugo-manager
 
 `)
 	data = append(header, data...)
@@ -207,6 +207,8 @@ func validateTemplates(templates TemplatesConfig) error {
 		"number":   true,
 		"bool":     true,
 		"date":     true,
+		"image":    true,
+		"array":    true,
 	}
 
 	for templateName, fields := range templates {

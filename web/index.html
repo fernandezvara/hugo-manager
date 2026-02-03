@@ -2,9 +2,15 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
     <title>Hugo Manager</title>
-    <link rel="stylesheet" href="/static/dist/css/app.css" />
+    <link
+      rel="stylesheet"
+      href="/static/dist/css/app.css"
+    />
     <style>
       .context-folder-display {
         padding: 8px 12px;
@@ -22,7 +28,11 @@
       window.APP_CONFIG = JSON.parse(`{{CONFIG_JSON}}`);
     </script>
   </head>
-  <body x-data="app" x-init="init()" @keydown.window="handleKeydown($event)">
+  <body
+    x-data="app"
+    x-init="init()"
+    @keydown.window="handleKeydown($event)"
+  >
     <!-- Header -->
     <header class="header">
       <div class="header-left">
@@ -37,13 +47,22 @@
           </svg>
           <span>Hugo Manager</span>
         </div>
-        <span class="project-name" x-text="config.projectName"></span>
+        <span
+          class="project-name"
+          x-text="config.projectName"
+        ></span>
       </div>
       <div class="header-center">
         <!-- Hugo status indicator -->
-        <div class="hugo-status" :class="'status-' + hugoStatus.status">
+        <div
+          class="hugo-status"
+          :class="'status-' + hugoStatus.status"
+        >
           <span class="status-dot"></span>
-          <span class="status-text" x-text="getStatusText()"></span>
+          <span
+            class="status-text"
+            x-text="getStatusText()"
+          ></span>
         </div>
         <div class="hugo-controls">
           <button
@@ -52,7 +71,10 @@
             class="btn btn-sm"
             title="Start Hugo"
           >
-            <svg viewBox="0 0 24 24" fill="currentColor">
+            <svg
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
               <polygon points="5,3 19,12 5,21" />
             </svg>
           </button>
@@ -62,8 +84,16 @@
             class="btn btn-sm"
             title="Stop Hugo"
           >
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="6" width="12" height="12" />
+            <svg
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <rect
+                x="6"
+                y="6"
+                width="12"
+                height="12"
+              />
             </svg>
           </button>
           <button
@@ -79,9 +109,7 @@
               stroke-width="2"
             >
               <path d="M23 4v6h-6M1 20v-6h6" />
-              <path
-                d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"
-              />
+              <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
             </svg>
           </button>
         </div>
@@ -108,7 +136,10 @@
 
     <main class="main-container">
       <!-- Sidebar: File Tree -->
-      <aside class="sidebar" :style="{ width: sidebarWidth + 'px' }">
+      <aside
+        class="sidebar"
+        :style="{ width: sidebarWidth + 'px' }"
+      >
         <div class="sidebar-header">
           <h3>Files</h3>
           <div class="sidebar-actions">
@@ -124,32 +155,16 @@
                 stroke-width="2"
               >
                 <path d="M23 4v6h-6M1 20v-6h6" />
-                <path
-                  d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"
-                />
-              </svg>
-            </button>
-            <button
-              @click="openTemplateModal()"
-              class="btn btn-icon"
-              title="New File from Template"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
-                />
-                <path d="M14 2v6h6M12 18v-6M9 15h6" />
+                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
               </svg>
             </button>
           </div>
         </div>
         <div class="file-tree">
-          <template x-for="item in fileTree" :key="item.path">
+          <template
+            x-for="item in fileTree"
+            :key="item.path"
+          >
             <div x-html="renderTreeItem(item, 0)"></div>
           </template>
         </div>
@@ -162,19 +177,39 @@
       ></div>
 
       <!-- Editor Panel -->
-      <section class="editor-panel" :style="{ width: editorWidth + 'px' }">
+      <section
+        class="editor-panel"
+        :style="{ width: editorWidth + 'px' }"
+      >
         <!-- Tabs -->
         <div class="editor-tabs">
-          <template x-for="tab in tabs" :key="tab.path">
+          <template
+            x-for="tab in tabs"
+            :key="tab.path"
+          >
             <div
               class="tab"
               :class="{ active: activeTab === tab.path, modified: tab.modified }"
               @click="switchTab(tab.path)"
             >
-              <span class="tab-icon" x-html="getFileIcon(tab.type)"></span>
-              <span class="tab-name" x-text="tab.name"></span>
-              <span x-show="tab.modified" class="tab-modified">●</span>
-              <button @click.stop="closeTab(tab.path)" class="tab-close">
+              <span
+                class="tab-icon"
+                x-html="getFileIcon(tab.type)"
+              ></span>
+              <span
+                class="tab-name"
+                x-text="tab.name"
+              ></span>
+              <span
+                x-show="tab.modified"
+                class="tab-modified"
+              >
+                ●
+              </span>
+              <button
+                @click.stop="closeTab(tab.path)"
+                class="tab-close"
+              >
                 ×
               </button>
             </div>
@@ -182,7 +217,10 @@
         </div>
 
         <!-- Toolbar -->
-        <div class="editor-toolbar" x-show="tabs.length > 0">
+        <div
+          class="editor-toolbar"
+          x-show="tabs.length > 0"
+        >
           <div class="toolbar-group">
             <button
               @click="saveCurrentFile()"
@@ -195,12 +233,25 @@
                 stroke="currentColor"
                 stroke-width="2"
               >
-                <path
-                  d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
-                />
+                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
                 <path d="M17 21v-8H7v8M7 3v5h8" />
               </svg>
               Save
+            </button>
+            <button
+              @click="openMetadataModal()"
+              class="btn btn-sm"
+              title="Edit Metadata (Ctrl+M)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+              </svg>
+              Metadata
             </button>
           </div>
           <div class="toolbar-group toolbar-format">
@@ -266,23 +317,34 @@
                 stroke="currentColor"
                 stroke-width="2"
               >
-                <path
-                  d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"
-                />
-                <path
-                  d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"
-                />
+                <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
               </svg>
             </button>
-            <button @click="formatImage()" class="btn btn-icon" title="Image">
+            <button
+              @click="formatImage()"
+              class="btn btn-icon"
+              title="Image"
+            >
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2"
               >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="2"
+                  ry="2"
+                />
+                <circle
+                  cx="8.5"
+                  cy="8.5"
+                  r="1.5"
+                />
                 <path d="M21 15l-5-5L5 21" />
               </svg>
             </button>
@@ -297,13 +359,24 @@
                 stroke="currentColor"
                 stroke-width="2"
               >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="2"
+                  ry="2"
+                />
                 <path d="M7 16h10" />
                 <path d="M7 12h6" />
                 <path d="M7 8h10" />
               </svg>
             </button>
-            <button @click="formatCode()" class="btn btn-icon" title="Code">
+            <button
+              @click="formatCode()"
+              class="btn btn-icon"
+              title="Code"
+            >
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -314,23 +387,64 @@
                 <polyline points="8 6 2 12 8 18" />
               </svg>
             </button>
-            <button @click="formatList()" class="btn btn-icon" title="List">
+            <button
+              @click="formatList()"
+              class="btn btn-icon"
+              title="List"
+            >
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2"
               >
-                <line x1="8" y1="6" x2="21" y2="6" />
-                <line x1="8" y1="12" x2="21" y2="12" />
-                <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
+                <line
+                  x1="8"
+                  y1="6"
+                  x2="21"
+                  y2="6"
+                />
+                <line
+                  x1="8"
+                  y1="12"
+                  x2="21"
+                  y2="12"
+                />
+                <line
+                  x1="8"
+                  y1="18"
+                  x2="21"
+                  y2="18"
+                />
+                <line
+                  x1="3"
+                  y1="6"
+                  x2="3.01"
+                  y2="6"
+                />
+                <line
+                  x1="3"
+                  y1="12"
+                  x2="3.01"
+                  y2="12"
+                />
+                <line
+                  x1="3"
+                  y1="18"
+                  x2="3.01"
+                  y2="18"
+                />
               </svg>
             </button>
-            <button @click="formatQuote()" class="btn btn-icon" title="Quote">
-              <svg viewBox="0 0 24 24" fill="currentColor">
+            <button
+              @click="formatQuote()"
+              class="btn btn-icon"
+              title="Quote"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
                 <path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z" />
               </svg>
             </button>
@@ -341,8 +455,14 @@
               class="shortcode-select"
             >
               <option value="">+ Shortcode</option>
-              <template x-for="sc in shortcodes" :key="sc.name">
-                <option :value="sc.name" x-text="sc.name"></option>
+              <template
+                x-for="sc in shortcodes"
+                :key="sc.name"
+              >
+                <option
+                  :value="sc.name"
+                  x-text="sc.name"
+                ></option>
               </template>
             </select>
           </div>
@@ -350,7 +470,10 @@
 
         <!-- Editor Container -->
         <div class="editor-container">
-          <div x-show="tabs.length === 0" class="editor-empty">
+          <div
+            x-show="tabs.length === 0"
+            class="editor-empty"
+          >
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -362,7 +485,10 @@
             </svg>
             <p>Select a file to edit</p>
           </div>
-          <div id="monaco-editor" x-show="tabs.length > 0"></div>
+          <div
+            id="code-editor"
+            x-show="tabs.length > 0"
+          ></div>
         </div>
       </section>
 
@@ -389,9 +515,7 @@
                 stroke-width="2"
               >
                 <path d="M23 4v6h-6M1 20v-6h6" />
-                <path
-                  d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"
-                />
+                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
               </svg>
             </button>
             <button
@@ -405,28 +529,43 @@
                 stroke="currentColor"
                 stroke-width="2"
               >
-                <path
-                  d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"
-                />
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
                 <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
+                <line
+                  x1="10"
+                  y1="14"
+                  x2="21"
+                  y2="3"
+                />
               </svg>
             </button>
           </div>
         </div>
         <div class="preview-container">
           <!-- Image preview -->
-          <div x-show="imageDimensions" class="image-preview-wrapper">
-            <img :src="previewUrl" alt="Preview" class="image-preview-fit" />
-            <div x-show="imageDimensions" class="image-dimensions">
-              <span
-                >Width:
-                <strong x-text="imageDimensions?.width"></strong> px</span
-              >
-              <span
-                >Height:
-                <strong x-text="imageDimensions?.height"></strong> px</span
-              >
+          <div
+            x-show="imageDimensions"
+            class="image-preview-wrapper"
+          >
+            <img
+              :src="previewUrl"
+              alt="Preview"
+              class="image-preview-fit"
+            />
+            <div
+              x-show="imageDimensions"
+              class="image-dimensions"
+            >
+              <span>
+                Width:
+                <strong x-text="imageDimensions?.width"></strong>
+                px
+              </span>
+              <span>
+                Height:
+                <strong x-text="imageDimensions?.height"></strong>
+                px
+              </span>
             </div>
           </div>
           <!-- Hugo preview iframe -->
@@ -448,17 +587,45 @@
     </main>
 
     <!-- Logs Panel -->
-    <div class="logs-panel" :class="{ open: showLogs }">
+    <div
+      class="logs-panel"
+      :class="{ open: showLogs }"
+    >
       <div class="logs-header">
         <span>Hugo Logs</span>
-        <button @click="clearLogs()" class="btn btn-sm">Clear</button>
-        <button @click="toggleLogs()" class="btn btn-icon">×</button>
+        <button
+          @click="clearLogs()"
+          class="btn btn-sm"
+        >
+          Clear
+        </button>
+        <button
+          @click="toggleLogs()"
+          class="btn btn-icon"
+        >
+          ×
+        </button>
       </div>
-      <div class="logs-content" id="logs-container">
-        <template x-for="(log, index) in logs" :key="index">
-          <div class="log-entry" :class="'log-' + log.type">
-            <span class="log-time" x-text="formatTime(log.time)"></span>
-            <span class="log-message" x-text="log.message"></span>
+      <div
+        class="logs-content"
+        id="logs-container"
+      >
+        <template
+          x-for="(log, index) in logs"
+          :key="index"
+        >
+          <div
+            class="log-entry"
+            :class="'log-' + log.type"
+          >
+            <span
+              class="log-time"
+              x-text="formatTime(log.time)"
+            ></span>
+            <span
+              class="log-message"
+              x-text="log.message"
+            ></span>
           </div>
         </template>
       </div>
@@ -474,12 +641,18 @@
       <div class="modal-content modal-lg">
         <div class="modal-header">
           <h3>Image</h3>
-          <button @click="showImageModal = false" class="btn btn-icon">
+          <button
+            @click="showImageModal = false"
+            class="btn btn-icon"
+          >
             ×
           </button>
         </div>
         <div class="modal-body">
-          <div class="toolbar-group" style="margin-bottom: 12px">
+          <div
+            class="toolbar-group"
+            style="margin-bottom: 12px"
+          >
             <button
               class="btn btn-sm"
               :class="{ 'btn-primary': imageModalTab === 'upload' }"
@@ -510,17 +683,21 @@
               />
             </div>
 
-            <div class="form-group" x-show="imageBrowsing">
+            <div
+              class="form-group"
+              x-show="imageBrowsing"
+            >
               <small>Loading...</small>
             </div>
 
             <div class="form-group">
               <label>Preview</label>
-              <div
-                style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"
-              >
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
                 <div class="image-browse-tree">
-                  <template x-for="item in imageBrowseTree" :key="item.path">
+                  <template
+                    x-for="item in imageBrowseTree"
+                    :key="item.path"
+                  >
                     <div x-html="renderImageBrowseTreeItem(item, 0)"></div>
                   </template>
                 </div>
@@ -531,11 +708,7 @@
                       <template x-if="imageBrowseSelected">
                         <img
                           :src="getRawFileUrl(imageBrowseSelected.path)"
-                          style="
-                            max-width: 100%;
-                            max-height: 240px;
-                            object-fit: contain;
-                          "
+                          style="max-width: 100%; max-height: 240px; object-fit: contain"
                         />
                       </template>
                       <template x-if="!imageBrowseSelected">
@@ -543,12 +716,13 @@
                       </template>
                     </div>
                   </div>
-                  <div class="form-group" x-show="imageBrowseSelected">
+                  <div
+                    class="form-group"
+                    x-show="imageBrowseSelected"
+                  >
                     <label>Public URL</label>
                     <div class="code-block">
-                      <code
-                        x-text="toPublicImageUrl(imageBrowseSelected?.path)"
-                      ></code>
+                      <code x-text="toPublicImageUrl(imageBrowseSelected?.path)"></code>
                       <button
                         @click="copyToClipboard(toPublicImageUrl(imageBrowseSelected?.path))"
                         class="btn btn-sm"
@@ -578,7 +752,10 @@
                 @change="handleImageSelect($event)"
                 hidden
               />
-              <label for="image-input" class="upload-label">
+              <label
+                for="image-input"
+                class="upload-label"
+              >
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -587,29 +764,56 @@
                 >
                   <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
                   <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
+                  <line
+                    x1="12"
+                    y1="3"
+                    x2="12"
+                    y2="15"
+                  />
                 </svg>
                 <span>Drop image here or click to select</span>
               </label>
             </div>
 
-            <div x-show="imagePreview" class="image-preview-container">
-              <img :src="imagePreview" alt="Preview" class="image-preview" />
+            <div
+              x-show="imagePreview"
+              class="image-preview-container"
+            >
+              <img
+                :src="imagePreview"
+                alt="Preview"
+                class="image-preview"
+              />
             </div>
 
-            <div x-show="imageFile" class="upload-options">
+            <div
+              x-show="imageFile"
+              class="upload-options"
+            >
               <!-- Folder selector - only show when not from context -->
-              <div class="form-group" x-show="!uploadFromContext">
+              <div
+                class="form-group"
+                x-show="!uploadFromContext"
+              >
                 <label>Folder</label>
                 <select x-model="uploadOptions.folder">
-                  <template x-for="folder in imageFolders" :key="folder.path">
-                    <option :value="folder.path" x-text="folder.name"></option>
+                  <template
+                    x-for="folder in imageFolders"
+                    :key="folder.path"
+                  >
+                    <option
+                      :value="folder.path"
+                      x-text="folder.name"
+                    ></option>
                   </template>
                 </select>
               </div>
 
               <!-- Context folder display - only show when from context -->
-              <div class="form-group" x-show="uploadFromContext">
+              <div
+                class="form-group"
+                x-show="uploadFromContext"
+              >
                 <label>Upload to</label>
                 <div class="context-folder-display">
                   <span x-text="uploadOptions.folder || '...'"></span>
@@ -618,13 +822,25 @@
 
               <div class="form-group">
                 <label>Filename</label>
-                <input type="text" x-model="uploadOptions.filename" />
+                <input
+                  type="text"
+                  x-model="uploadOptions.filename"
+                />
               </div>
               <div class="form-group">
                 <label>Preset</label>
-                <select x-model="uploadOptions.preset" @change="applyPreset()">
-                  <template x-for="preset in imagePresets" :key="preset.name">
-                    <option :value="preset.name" x-text="preset.name"></option>
+                <select
+                  x-model="uploadOptions.preset"
+                  @change="applyPreset()"
+                >
+                  <template
+                    x-for="preset in imagePresets"
+                    :key="preset.name"
+                  >
+                    <option
+                      :value="preset.name"
+                      x-text="preset.name"
+                    ></option>
                   </template>
                 </select>
               </div>
@@ -640,9 +856,11 @@
                 />
               </div>
               <div class="form-group">
-                <label
-                  >Quality: <span x-text="uploadOptions.quality"></span>%</label
-                >
+                <label>
+                  Quality:
+                  <span x-text="uploadOptions.quality"></span>
+                  %
+                </label>
                 <input
                   type="range"
                   min="1"
@@ -652,7 +870,10 @@
               </div>
             </div>
 
-            <div x-show="uploadResult" class="upload-result">
+            <div
+              x-show="uploadResult"
+              class="upload-result"
+            >
               <h4>Generated Images</h4>
               <div class="variant-list">
                 <template
@@ -708,7 +929,12 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button @click="showImageModal = false" class="btn">Cancel</button>
+          <button
+            @click="closeImageModal()"
+            class="btn"
+          >
+            Cancel
+          </button>
           <button
             x-show="imageModalTab === 'browse'"
             @click="insertBrowseImage()"
@@ -730,6 +956,157 @@
       </div>
     </div>
 
+    <!-- Metadata Modal -->
+    <div
+      class="modal"
+      x-show="showMetadataModal"
+      @click.self="showMetadataModal = false"
+      x-cloak
+    >
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Edit Metadata</h2>
+          <button
+            @click="showMetadataModal = false"
+            class="btn btn-icon"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Template</label>
+            <select
+              x-model="selectedTemplate"
+              @change="updateMetadataFields()"
+            >
+              <option value="">Custom (no schema)</option>
+              <template
+                x-for="(tmpl, key) in config.templates"
+                :key="key"
+              >
+                <option
+                  :value="key"
+                  x-text="key"
+                ></option>
+              </template>
+            </select>
+          </div>
+          <template
+            x-for="(field, key) in metadataFields"
+            :key="key"
+          >
+            <div class="form-group">
+              <label x-text="field.label || key"></label>
+              <span
+                x-show="!('default' in field)"
+                style="color: var(--text-muted); font-size: 0.8em"
+              >
+                *
+              </span>
+              <!-- Text -->
+              <input
+                x-show="field.type === 'text'"
+                type="text"
+                x-model="metadataForm[key]"
+                :required="!('default' in field)"
+              />
+              <!-- Textarea -->
+              <textarea
+                x-show="field.type === 'textarea'"
+                x-model="metadataForm[key]"
+                rows="4"
+                :required="!('default' in field)"
+              ></textarea>
+              <!-- Number -->
+              <input
+                x-show="field.type === 'number'"
+                type="number"
+                x-model="metadataForm[key]"
+                :required="!('default' in field)"
+              />
+              <!-- Date -->
+              <input
+                x-show="field.type === 'date'"
+                type="date"
+                x-model="metadataForm[key]"
+                :required="!('default' in field)"
+              />
+              <!-- Bool -->
+              <label
+                x-show="field.type === 'bool'"
+                class="checkbox-label"
+              >
+                <input
+                  type="checkbox"
+                  x-model="metadataForm[key]"
+                />
+                <span x-text="field.label || key"></span>
+              </label>
+              <!-- Array -->
+              <div x-show="field.type === 'array'">
+                <template
+                  x-for="(val, idx) in metadataForm[key] || []"
+                  :key="idx"
+                >
+                  <div style="display: flex; gap: 4px; margin-bottom: 4px">
+                    <input
+                      type="text"
+                      x-model="metadataForm[key][idx]"
+                    />
+                    <button
+                      @click="metadataForm[key].splice(idx, 1)"
+                      class="btn btn-sm btn-icon"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </template>
+                <button
+                  @click="!metadataForm[key] ? metadataForm[key] = [''] : metadataForm[key].push('')"
+                  class="btn btn-sm"
+                >
+                  + Add
+                </button>
+              </div>
+              <!-- Image -->
+              <div
+                x-show="field.type === 'image'"
+                style="display: flex; gap: 4px"
+              >
+                <input
+                  type="text"
+                  x-model="metadataForm[key]"
+                  placeholder="Image path"
+                  :required="!('default' in field)"
+                />
+                <button
+                  @click="openImageSelectorForMetadata(key)"
+                  class="btn btn-sm"
+                >
+                  Select
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+        <div class="modal-footer">
+          <button
+            @click="showMetadataModal = false"
+            class="btn"
+          >
+            Cancel
+          </button>
+          <button
+            @click="saveMetadata()"
+            class="btn btn-primary"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div
       class="modal"
       x-show="showImgShortcodeModal"
@@ -739,7 +1116,10 @@
       <div class="modal-content modal-lg">
         <div class="modal-header">
           <h3>img</h3>
-          <button @click="showImgShortcodeModal = false" class="btn btn-icon">
+          <button
+            @click="showImgShortcodeModal = false"
+            class="btn btn-icon"
+          >
             ×
           </button>
         </div>
@@ -754,17 +1134,21 @@
             />
           </div>
 
-          <div class="form-group" x-show="imgShortcodeBrowsing">
+          <div
+            class="form-group"
+            x-show="imgShortcodeBrowsing"
+          >
             <small>Loading...</small>
           </div>
 
           <div class="form-group">
             <label>Preview</label>
-            <div
-              style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px"
-            >
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
               <div class="image-browse-tree">
-                <template x-for="item in imgShortcodeTree" :key="item.path">
+                <template
+                  x-for="item in imgShortcodeTree"
+                  :key="item.path"
+                >
                   <div x-html="renderImgShortcodeTreeItem(item, 0)"></div>
                 </template>
               </div>
@@ -775,11 +1159,7 @@
                     <template x-if="imgShortcodeSelected">
                       <img
                         :src="getRawFileUrl(imgShortcodeSelected.path)"
-                        style="
-                          max-width: 100%;
-                          max-height: 240px;
-                          object-fit: contain;
-                        "
+                        style="max-width: 100%; max-height: 240px; object-fit: contain"
                       />
                     </template>
                     <template x-if="!imgShortcodeSelected">
@@ -788,22 +1168,43 @@
                   </div>
                 </div>
 
-                <div class="form-group" x-show="imgShortcodeSelected">
+                <div
+                  class="form-group"
+                  x-show="imgShortcodeSelected"
+                >
                   <label>Alt</label>
-                  <input type="text" x-model="imgShortcodeOptions.alt" />
+                  <input
+                    type="text"
+                    x-model="imgShortcodeOptions.alt"
+                  />
                 </div>
 
-                <div class="form-group" x-show="imgShortcodeSelected">
+                <div
+                  class="form-group"
+                  x-show="imgShortcodeSelected"
+                >
                   <label>Class</label>
-                  <input type="text" x-model="imgShortcodeOptions.class" />
+                  <input
+                    type="text"
+                    x-model="imgShortcodeOptions.class"
+                  />
                 </div>
 
-                <div class="form-group" x-show="imgShortcodeSelected">
+                <div
+                  class="form-group"
+                  x-show="imgShortcodeSelected"
+                >
                   <label>Sizes</label>
-                  <input type="text" x-model="imgShortcodeOptions.sizes" />
+                  <input
+                    type="text"
+                    x-model="imgShortcodeOptions.sizes"
+                  />
                 </div>
 
-                <div class="form-group" x-show="imgShortcodeSelected">
+                <div
+                  class="form-group"
+                  x-show="imgShortcodeSelected"
+                >
                   <label>Loading</label>
                   <select x-model="imgShortcodeOptions.loading">
                     <option value="">(default)</option>
@@ -812,7 +1213,10 @@
                   </select>
                 </div>
 
-                <div class="form-group" x-show="imgShortcodeResult">
+                <div
+                  class="form-group"
+                  x-show="imgShortcodeResult"
+                >
                   <label>Shortcode</label>
                   <div class="code-block">
                     <code x-text="imgShortcodeFinal"></code>
@@ -830,7 +1234,10 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button @click="showImgShortcodeModal = false" class="btn">
+          <button
+            @click="showImgShortcodeModal = false"
+            class="btn"
+          >
             Cancel
           </button>
           <button
@@ -854,7 +1261,12 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>Upload File</h3>
-          <button @click="showFileModal = false" class="btn btn-icon">×</button>
+          <button
+            @click="showFileModal = false"
+            class="btn btn-icon"
+          >
+            ×
+          </button>
         </div>
         <div class="modal-body">
           <div
@@ -864,7 +1276,10 @@
             @dragleave.prevent="fileDragOver = false"
             @drop.prevent="handleFileDrop($event, 'file')"
           >
-            <label for="file-upload-input" class="upload-label">
+            <label
+              for="file-upload-input"
+              class="upload-label"
+            >
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -873,7 +1288,12 @@
               >
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="17,8 12,3 7,8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
+                <line
+                  x1="12"
+                  y1="3"
+                  x2="12"
+                  y2="15"
+                ></line>
               </svg>
               <span>Drop file here or click to select</span>
             </label>
@@ -885,9 +1305,15 @@
             />
           </div>
 
-          <div x-show="fileUploadFile" class="upload-options">
+          <div
+            x-show="fileUploadFile"
+            class="upload-options"
+          >
             <!-- Context folder display - only show when from context -->
-            <div class="form-group" x-show="fileUploadFromContext">
+            <div
+              class="form-group"
+              x-show="fileUploadFromContext"
+            >
               <label>Upload to</label>
               <div class="context-folder-display">
                 <span x-text="fileUploadOptions.folder || '...'"></span>
@@ -896,11 +1322,17 @@
 
             <div class="form-group">
               <label>Filename</label>
-              <input type="text" x-model="fileUploadOptions.filename" />
+              <input
+                type="text"
+                x-model="fileUploadOptions.filename"
+              />
             </div>
           </div>
 
-          <div x-show="fileUploadResult" class="upload-result">
+          <div
+            x-show="fileUploadResult"
+            class="upload-result"
+          >
             <h4>✅ File Uploaded Successfully!</h4>
             <div class="form-group">
               <label>Path</label>
@@ -923,7 +1355,12 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button @click="showFileModal = false" class="btn">Cancel</button>
+          <button
+            @click="showFileModal = false"
+            class="btn"
+          >
+            Cancel
+          </button>
           <button
             @click="uploadFile()"
             class="btn btn-primary"
@@ -946,7 +1383,10 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>Process Image</h3>
-          <button @click="showProcessModal = false" class="btn btn-icon">
+          <button
+            @click="showProcessModal = false"
+            class="btn btn-icon"
+          >
             ×
           </button>
         </div>
@@ -960,17 +1400,26 @@
           </div>
 
           <!-- Target folder display - only show when from context -->
-          <div class="form-group" x-show="processFromContext">
+          <div
+            class="form-group"
+            x-show="processFromContext"
+          >
             <label>Process to</label>
             <div class="context-folder-display">
               <span x-text="processOptions.folder || '...'"></span>
             </div>
           </div>
 
-          <div x-show="processOptions.sourcePath" class="upload-options">
+          <div
+            x-show="processOptions.sourcePath"
+            class="upload-options"
+          >
             <div class="form-group">
               <label>Filename</label>
-              <input type="text" x-model="processOptions.filename" />
+              <input
+                type="text"
+                x-model="processOptions.filename"
+              />
             </div>
 
             <div class="form-group">
@@ -986,13 +1435,22 @@
             <div class="form-group">
               <label>Preset</label>
               <select x-model="processOptions.preset">
-                <template x-for="preset in imagePresets" :key="preset.name">
-                  <option :value="preset.name" x-text="preset.name"></option>
+                <template
+                  x-for="preset in imagePresets"
+                  :key="preset.name"
+                >
+                  <option
+                    :value="preset.name"
+                    x-text="preset.name"
+                  ></option>
                 </template>
               </select>
             </div>
 
-            <div class="form-group" x-show="processOptions.preset === 'Custom'">
+            <div
+              class="form-group"
+              x-show="processOptions.preset === 'Custom'"
+            >
               <label>Custom Widths (comma-separated)</label>
               <input
                 type="text"
@@ -1002,7 +1460,10 @@
             </div>
           </div>
 
-          <div x-show="processResult" class="upload-result">
+          <div
+            x-show="processResult"
+            class="upload-result"
+          >
             <h4>✅ Image Processed Successfully!</h4>
             <div class="form-group">
               <label>Original</label>
@@ -1055,7 +1516,12 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button @click="showProcessModal = false" class="btn">Cancel</button>
+          <button
+            @click="showProcessModal = false"
+            class="btn"
+          >
+            Cancel
+          </button>
           <button
             @click="processImage()"
             class="btn btn-primary"
@@ -1078,7 +1544,12 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>Create Copy</h3>
-          <button @click="showCopyModal = false" class="btn btn-icon">×</button>
+          <button
+            @click="showCopyModal = false"
+            class="btn btn-icon"
+          >
+            ×
+          </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -1089,11 +1560,19 @@
           </div>
           <div class="form-group">
             <label>Copy Name</label>
-            <input type="text" x-model="copyOptions.targetFilename" />
+            <input
+              type="text"
+              x-model="copyOptions.targetFilename"
+            />
           </div>
         </div>
         <div class="modal-footer">
-          <button @click="showCopyModal = false" class="btn">Cancel</button>
+          <button
+            @click="showCopyModal = false"
+            class="btn"
+          >
+            Cancel
+          </button>
           <button
             @click="copyFile()"
             class="btn btn-primary"
@@ -1116,7 +1595,12 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>New File</h3>
-          <button @click="showNewFile = false" class="btn btn-icon">×</button>
+          <button
+            @click="showNewFile = false"
+            class="btn btn-icon"
+          >
+            ×
+          </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -1130,14 +1614,25 @@
           </div>
           <div class="form-group">
             <label>
-              <input type="checkbox" x-model="newFileIsDir" />
+              <input
+                type="checkbox"
+                x-model="newFileIsDir"
+              />
               Create as directory
             </label>
           </div>
         </div>
         <div class="modal-footer">
-          <button @click="showNewFile = false" class="btn">Cancel</button>
-          <button @click="createNewFile()" class="btn btn-primary">
+          <button
+            @click="showNewFile = false"
+            class="btn"
+          >
+            Cancel
+          </button>
+          <button
+            @click="createNewFile()"
+            class="btn btn-primary"
+          >
             Create
           </button>
         </div>
@@ -1154,7 +1649,10 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>Select File</h3>
-          <button @click="showFileSelector = false" class="btn btn-icon">
+          <button
+            @click="showFileSelector = false"
+            class="btn btn-icon"
+          >
             ×
           </button>
         </div>
@@ -1166,8 +1664,14 @@
             class="search-input"
           />
           <div class="file-selector-list">
-            <template x-for="file in filteredDataFiles" :key="file.path">
-              <div class="file-selector-item" @click="selectDataFile(file)">
+            <template
+              x-for="file in filteredDataFiles"
+              :key="file.path"
+            >
+              <div
+                class="file-selector-item"
+                @click="selectDataFile(file)"
+              >
                 <span x-text="file.name"></span>
                 <small x-text="file.path"></small>
               </div>
@@ -1179,7 +1683,10 @@
 
     <!-- Toast notifications -->
     <div class="toast-container">
-      <template x-for="toast in toasts" :key="toast.id">
+      <template
+        x-for="toast in toasts"
+        :key="toast.id"
+      >
         <div
           class="toast"
           :class="'toast-' + toast.type"
@@ -1201,7 +1708,12 @@
       <div class="modal-content modal-lg">
         <div class="modal-header">
           <h3>Create from Template</h3>
-          <button @click="closeTemplateModal()" class="btn btn-icon">×</button>
+          <button
+            @click="closeTemplateModal()"
+            class="btn btn-icon"
+          >
+            ×
+          </button>
         </div>
         <div class="modal-body">
           <!-- Template Selection -->
@@ -1217,15 +1729,16 @@
                 x-for="(template, name) in config.templates"
                 :key="name"
               >
-                <option :value="name" x-text="name"></option>
+                <option
+                  :value="name"
+                  x-text="name"
+                ></option>
               </template>
             </select>
           </div>
 
           <!-- Dynamic Form Fields -->
-          <template
-            x-if="selectedTemplate && config.templates[selectedTemplate]"
-          >
+          <template x-if="selectedTemplate && config.templates[selectedTemplate]">
             <div class="template-form">
               <template
                 x-for="(field, fieldName) in config.templates[selectedTemplate]"
@@ -1235,9 +1748,7 @@
                   <!-- Text Input -->
                   <template x-if="field.type === 'text'">
                     <div>
-                      <label
-                        x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1) + ':'"
-                      ></label>
+                      <label x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1) + ':'"></label>
                       <input
                         type="text"
                         class="form-control"
@@ -1250,9 +1761,7 @@
                   <!-- Textarea -->
                   <template x-if="field.type === 'textarea'">
                     <div>
-                      <label
-                        x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1) + ':'"
-                      ></label>
+                      <label x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1) + ':'"></label>
                       <textarea
                         class="form-control"
                         rows="4"
@@ -1264,9 +1773,7 @@
                   <!-- Number Input -->
                   <template x-if="field.type === 'number'">
                     <div>
-                      <label
-                        x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1) + ':'"
-                      ></label>
+                      <label x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1) + ':'"></label>
                       <input
                         type="number"
                         class="form-control"
@@ -1284,9 +1791,7 @@
                           :checked="templateForm[fieldName] === true || templateForm[fieldName] === 'true'"
                           @change="templateForm[fieldName] = $event.target.checked"
                         />
-                        <span
-                          x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1)"
-                        ></span>
+                        <span x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1)"></span>
                       </label>
                     </div>
                   </template>
@@ -1294,9 +1799,7 @@
                   <!-- Date Input -->
                   <template x-if="field.type === 'date'">
                     <div>
-                      <label
-                        x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1) + ':'"
-                      ></label>
+                      <label x-text="fieldName.charAt(0).toUpperCase() + fieldName.slice(1) + ':'"></label>
                       <input
                         type="date"
                         class="form-control"
@@ -1321,16 +1824,22 @@
           </template>
         </div>
         <div class="modal-footer">
-          <div class="modal-footer-info" x-show="templateFilename">
+          <div
+            class="modal-footer-info"
+            x-show="templateFilename"
+          >
             <small class="text-muted">
               File path:
-              <code
-                x-text="templateDirectory ? templateDirectory + '/' + templateFilename : templateFilename"
-              ></code>
+              <code x-text="templateDirectory ? templateDirectory + '/' + templateFilename : templateFilename"></code>
             </small>
           </div>
           <div class="modal-footer-actions">
-            <button @click="closeTemplateModal()" class="btn">Cancel</button>
+            <button
+              @click="closeTemplateModal()"
+              class="btn"
+            >
+              Cancel
+            </button>
             <button
               @click="createFromTemplate()"
               class="btn btn-primary"
@@ -1380,7 +1889,10 @@
       >
         📁 Upload File
       </div>
-      <div class="context-menu-divider" x-show="contextMenu.isDirectory"></div>
+      <div
+        class="context-menu-divider"
+        x-show="contextMenu.isDirectory"
+      ></div>
       <div
         class="context-menu-item"
         @click="contextMenuCreateCopy()"
@@ -1395,10 +1907,16 @@
       >
         ⚡ Process Image
       </div>
-      <div class="context-menu-item" @click="contextMenuRename()">
+      <div
+        class="context-menu-item"
+        @click="contextMenuRename()"
+      >
         ✏️ Rename
       </div>
-      <div class="context-menu-item danger" @click="contextMenuDelete()">
+      <div
+        class="context-menu-item danger"
+        @click="contextMenuDelete()"
+      >
         🗑️ Delete
       </div>
     </div>
@@ -1413,7 +1931,12 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>Select Directory</h3>
-          <button @click="closeDirectoryModal()" class="btn btn-icon">×</button>
+          <button
+            @click="closeDirectoryModal()"
+            class="btn btn-icon"
+          >
+            ×
+          </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -1426,7 +1949,10 @@
               @keyup.enter="confirmDirectorySelection()"
             />
           </div>
-          <div class="form-group" x-show="selectedDirectory">
+          <div
+            class="form-group"
+            x-show="selectedDirectory"
+          >
             <label>Parent Directory:</label>
             <div class="directory-path">
               <span x-text="selectedDirectory || 'Root'"></span>
@@ -1434,7 +1960,12 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button @click="closeDirectoryModal()" class="btn">Cancel</button>
+          <button
+            @click="closeDirectoryModal()"
+            class="btn"
+          >
+            Cancel
+          </button>
           <button
             @click="confirmDirectorySelection()"
             class="btn btn-primary"
@@ -1456,12 +1987,20 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>Rename</h3>
-          <button @click="closeRenameModal()" class="btn btn-icon">×</button>
+          <button
+            @click="closeRenameModal()"
+            class="btn btn-icon"
+          >
+            ×
+          </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
             <label>Item Name:</label>
-            <div class="current-name" x-text="renameItemName"></div>
+            <div
+              class="current-name"
+              x-text="renameItemName"
+            ></div>
           </div>
           <div class="form-group">
             <label>New Name:</label>
@@ -1475,7 +2014,12 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button @click="closeRenameModal()" class="btn">Cancel</button>
+          <button
+            @click="closeRenameModal()"
+            class="btn"
+          >
+            Cancel
+          </button>
           <button
             @click="confirmRename()"
             class="btn btn-primary"
@@ -1497,20 +2041,36 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3 x-text="confirmTitle"></h3>
-          <button @click="closeConfirmModal()" class="btn btn-icon">×</button>
+          <button
+            @click="closeConfirmModal()"
+            class="btn btn-icon"
+          >
+            ×
+          </button>
         </div>
         <div class="modal-body">
           <p x-text="confirmMessage"></p>
         </div>
         <div class="modal-footer">
-          <button @click="closeConfirmModal()" class="btn">Cancel</button>
-          <button @click="confirmAction()" class="btn btn-danger">
+          <button
+            @click="closeConfirmModal()"
+            class="btn"
+          >
+            Cancel
+          </button>
+          <button
+            @click="confirmAction()"
+            class="btn btn-danger"
+          >
             Confirm
           </button>
         </div>
       </div>
     </div>
 
-    <script type="module" src="/static/dist/js/app.js"></script>
+    <script
+      type="module"
+      src="/static/dist/js/app.js"
+    ></script>
   </body>
 </html>

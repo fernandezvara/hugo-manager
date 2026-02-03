@@ -32,6 +32,7 @@ export function createApp() {
     editorWidth: null,
     showLogs: false,
     showImageModal: false,
+    showMetadataModal: false,
     showFileModal: false,
     showNewFile: false,
     showFileSelector: false,
@@ -135,6 +136,11 @@ export function createApp() {
     uploadResult: null,
     uploading: false,
 
+    // Metadata Modal
+    selectedTemplate: "",
+    metadataFields: {},
+    metadataForm: {},
+
     // File Upload
     fileUploadFile: null,
     fileUploadOptions: {
@@ -202,6 +208,31 @@ export function createApp() {
         clearInterval(this.statusInterval);
       }
       this.statusInterval = setInterval(() => this.loadHugoStatus(), 5000);
+
+      // Keyboard shortcuts
+      document.addEventListener("keydown", (e) => {
+        // Ctrl/Cmd+M: open metadata modal
+        if ((e.ctrlKey || e.metaKey) && e.key === "m") {
+          e.preventDefault();
+          this.openMetadataModal();
+        }
+        // Escape: close topmost modal
+        if (e.key === "Escape") {
+          if (this.showImageModal && this.metadataImageField) {
+            // Canceling image selector from metadata modal
+            this.showImageModal = false;
+            this.metadataImageField = null;
+            // Restore metadata modal
+            this.showMetadataModal = true;
+          } else if (this.showMetadataModal) {
+            this.showMetadataModal = false;
+            this.metadataImageField = null;
+          } else if (this.showImageModal) {
+            this.showImageModal = false;
+            this.metadataImageField = null;
+          }
+        }
+      });
     },
 
     // File Operations
@@ -540,8 +571,6 @@ export function createApp() {
     },
 
     switchTab(path) {
-      console.log("[DEBUG] switchTab called with path:", path);
-
       // Save current editor content to the current tab before switching
       if (this.editor && this.activeTab) {
         const currentTab = this.tabs.find((t) => t.path === this.activeTab);
@@ -553,26 +582,16 @@ export function createApp() {
       this.activeTab = path;
       const tab = this.tabs.find((t) => t.path === path);
       if (!tab) {
-        console.log("[DEBUG] No tab found, returning");
         return;
       }
 
-      console.log("[DEBUG] Tab found, creating CodeMirror editor...");
 
       // Wait for Alpine to update the DOM (show the container) before creating editor
       this.$nextTick(() => {
-        console.log("[DEBUG] In nextTick callback");
         // Create editor if it doesn't exist yet
         if (!this.editor) {
-          console.log("[DEBUG] Creating CodeMirror editor...");
-          const container = document.getElementById("monaco-editor");
-          console.log(
-            "[DEBUG] Container element:",
-            container,
-            "display:",
-            container?.style?.display,
-          );
-
+          const container = document.getElementById("code-editor");
+          
           const startState = EditorState.create({
             doc: tab.content,
             extensions: [
@@ -617,10 +636,8 @@ export function createApp() {
             state: startState,
             parent: container,
           });
-          console.log("[DEBUG] CodeMirror editor created:", this.editor);
         } else {
           // Update existing editor content
-          console.log("[DEBUG] Updating CodeMirror content...");
           this.editor.dispatch({
             changes: {
               from: 0,
@@ -630,9 +647,7 @@ export function createApp() {
           });
         }
 
-        console.log("[DEBUG] Updating preview URL...");
         this.updatePreviewUrl(path);
-        console.log("[DEBUG] switchTab complete");
       });
     },
 
@@ -895,8 +910,16 @@ Content goes here...
     },
 
     insertBrowseImage() {
-      if (!this.editor || !this.imageBrowseSelected) return;
+      if (!this.imageBrowseSelected) return;
 
+      // If we're setting a metadata field, use the path directly
+      if (this.metadataImageField) {
+        this.onImageSelectedForMetadata(this.imageBrowseSelected.path);
+        return;
+      }
+
+      // Normal editor insertion
+      if (!this.editor) return;
       const publicUrl = this.toPublicImageUrl(this.imageBrowseSelected.path);
       const insert = `![alt text](${publicUrl})`;
 
@@ -912,6 +935,231 @@ Content goes here...
 
       this.showImageModal = false;
       this.showToast("Image inserted", "success");
+    },
+
+    // Metadata Modal
+    metadataImageField: null, // Track which field is being set
+
+    openMetadataModal() {
+      if (!this.activeTab) {
+        this.showToast("No file open", "error");
+        return;
+      }
+      // Load existing frontmatter into form
+      const content = this.editor.state.sliceDoc();
+      const { frontmatter } = this.parseFrontmatter(content);
+      this.metadataForm = { ...frontmatter };
+
+      // Auto-detect template
+      const detected = this.detectTemplate(frontmatter);
+      if (detected.length === 1) {
+        this.selectedTemplate = detected[0];
+      } else if (detected.length > 1) {
+        // TODO: Show prompt to choose (for now, default to empty)
+        this.selectedTemplate = "";
+      } else {
+        this.selectedTemplate = "";
+      }
+
+      this.metadataFields = {};
+      this.updateMetadataFields();
+      this.showMetadataModal = true;
+    },
+
+    openImageSelectorForMetadata(fieldKey) {
+      this.metadataImageField = fieldKey;
+      // Hide metadata modal while image selector is open
+      this.showMetadataModal = false;
+      // Open the existing image selector modal in browse mode
+      this.imageModalTab = "browse";
+      this.showImageModal = true;
+      this.loadImageBrowseTree();
+    },
+
+    onImageSelectedForMetadata(path) {
+      if (this.metadataImageField) {
+        this.metadataForm[this.metadataImageField] = path;
+        this.metadataImageField = null;
+      }
+      this.showImageModal = false;
+      // Restore metadata modal
+      this.showMetadataModal = true;
+    },
+
+    closeImageModal() {
+      this.showImageModal = false;
+      if (this.metadataImageField) {
+        this.metadataImageField = null;
+        // Restore metadata modal if we were called from it
+        this.showMetadataModal = true;
+      }
+    },
+
+    detectTemplate(frontmatter) {
+      const matches = [];
+      for (const [key, tmpl] of Object.entries(this.config.templates || {})) {
+        // Simple detection: check if any frontmatter key matches a template key
+        for (const fmKey of Object.keys(frontmatter)) {
+          if (fmKey.toLowerCase() === key.toLowerCase()) {
+            matches.push(key);
+            break;
+          }
+        }
+      }
+      return matches;
+    },
+
+    // Watcher: when selectedTemplate changes, update fields and form defaults
+    updateMetadataFields() {
+      if (!this.selectedTemplate) {
+        this.metadataFields = {};
+        return;
+      }
+      const tmpl = this.config.templates?.[this.selectedTemplate];
+      if (!tmpl) return;
+      this.metadataFields = tmpl;
+      // Apply defaults for missing fields
+      for (const [key, field] of Object.entries(tmpl)) {
+        if (!(key in this.metadataForm) && "default" in field) {
+          this.metadataForm[key] = field.default;
+        }
+      }
+    },
+
+    saveMetadata() {
+      if (!this.selectedTemplate) {
+        this.showToast("Please select a template", "error");
+        return;
+      }
+      if (!this.activeTab) {
+        this.showToast("No file open", "error");
+        return;
+      }
+
+      try {
+        const content = this.editor.state.sliceDoc();
+        const { frontmatter, body } = this.parseFrontmatter(content);
+        // Preserve unknown keys and update only schema-defined keys
+        const updatedFrontmatter = { ...frontmatter };
+        for (const [key, value] of Object.entries(this.metadataForm)) {
+          updatedFrontmatter[key] = value;
+        }
+        const newContent = this.serializeFrontmatter(updatedFrontmatter) + body;
+        this.editor.dispatch({
+          changes: { from: 0, to: content.length, insert: newContent },
+        });
+        // Mark tab as modified
+        const tab = this.tabs.find((t) => t.path === this.activeTab);
+        if (tab) {
+          tab.modified = true;
+          tab.originalContent = newContent;
+        }
+        this.showMetadataModal = false;
+        this.showToast("Metadata updated", "success");
+      } catch (err) {
+        // Already shown toast in parseFrontmatter; do nothing
+      }
+    },
+
+    parseFrontmatter(content) {
+      const fmRegex = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/;
+      const match = content.match(fmRegex);
+      if (!match) {
+        return { frontmatter: {}, body: content };
+      }
+      try {
+        // Simple YAML parsing for flat objects (sufficient for now)
+        const frontmatter = this.parseSimpleYaml(match[1]);
+        return { frontmatter, body: match[2] || "" };
+      } catch (err) {
+        // Show alert and abort on malformed frontmatter
+        this.showToast("Malformed frontmatter: " + err.message, "error");
+        throw new Error("Malformed frontmatter");
+      }
+    },
+
+    parseSimpleYaml(yamlStr) {
+      const obj = {};
+      const lines = yamlStr.split("\n");
+      let currentKey = null;
+      let inArray = false;
+      let arrayValues = [];
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (inArray) {
+          if (trimmed.startsWith("- ")) {
+            const val = trimmed.slice(2).trim();
+            // Strip quotes if present
+            const cleaned = ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) ? val.slice(1, -1) : val;
+            arrayValues.push(cleaned);
+          } else {
+            // End of array
+            obj[currentKey] = arrayValues;
+            inArray = false;
+            arrayValues = [];
+            currentKey = null;
+          }
+        }
+        if (inArray) continue;
+
+        const colon = line.indexOf(":");
+        if (colon > 0) {
+          currentKey = line.slice(0, colon).trim();
+          let value = line.slice(colon + 1).trim();
+          if (value === "") {
+            // Possible array start
+            inArray = true;
+            continue;
+          }
+          // Strip quotes if present
+          if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+          }
+          // Convert boolean-like strings
+          if (value === "true") value = true;
+          if (value === "false") value = false;
+          // Convert numbers
+          if (/^\d+$/.test(value)) value = Number(value);
+          obj[currentKey] = value;
+        }
+      }
+      // Handle array at end of file
+      if (inArray && currentKey) {
+        obj[currentKey] = arrayValues;
+      }
+      return obj;
+    },
+
+    serializeFrontmatter(obj) {
+      const yamlLines = ["---"];
+      for (const [key, value] of Object.entries(obj)) {
+        if (Array.isArray(value)) {
+          yamlLines.push(`${key}:`);
+          for (const item of value) {
+            const needsQuotes = /[:\s#]/.test(item);
+            yamlLines.push(`  - ${needsQuotes ? `"${item}"` : item}`);
+          }
+        } else if (value === true) {
+          yamlLines.push(`${key}: true`);
+        } else if (value === false) {
+          yamlLines.push(`${key}: false`);
+        } else if (typeof value === "number") {
+          yamlLines.push(`${key}: ${value}`);
+        } else if (typeof value === "string" && value.includes("\n")) {
+          // Simple multiline handling (basic)
+          yamlLines.push(`${key}: |`);
+          for (const sub of value.split("\n")) {
+            yamlLines.push(`  ${sub}`);
+          }
+        } else {
+          // Quote if contains special chars
+          const needsQuotes = /[:\s#]/.test(value);
+          yamlLines.push(`${key}: ${needsQuotes ? `"${value}"` : value}`);
+        }
+      }
+      yamlLines.push("---\n");
+      return yamlLines.join("\n");
     },
 
     formatCode() {
